@@ -171,7 +171,9 @@ class DragPinchManager implements
             return false;
         }
 
-        if (pdfView.getZoom() < pdfView.getMidZoom()) {
+        if (pdfView.getZoom() < pdfView.getMinZoom()) {
+            pdfView.resetZoomWithAnimation();
+        } else if (pdfView.getZoom() < pdfView.getMidZoom()) {
             pdfView.zoomWithAnimation(e.getX(), e.getY(), pdfView.getMidZoom());
         } else if (pdfView.getZoom() < pdfView.getMaxZoom()) {
             pdfView.zoomWithAnimation(e.getX(), e.getY(), pdfView.getMaxZoom());
