@@ -109,7 +109,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
 
     @SuppressLint("InflateParams")
     private fun getScrollHandle(): ScrollHandle = DefaultScrollHandle(this).apply {
-        val view = layoutInflater.inflate(R.layout.handle_background, null);
+        val view = layoutInflater.inflate(R.layout.handle_background, null)
         setPageHandleView(view, view.findViewById(R.id.pageIndicator))
         setTextColor(ResourcesCompat.getColor(resources, android.R.color.white, null))
         setTextSize(DEFAULT_TEXT_SIZE_DP)
