@@ -29,6 +29,7 @@ import android.util.Log
 import com.infomaniak.lib.pdfview.RenderingHandler.RenderingTask
 import com.infomaniak.lib.pdfview.exception.PageRenderingException
 import com.infomaniak.lib.pdfview.model.PagePart
+import kotlin.math.roundToInt
 
 /**
  * A [Handler] that will process incoming [RenderingTask] messages
@@ -81,7 +82,7 @@ internal class RenderingHandler(
                 if (running) {
                     post { onBitmapRendered(pagePart, task.isForPrinting) }
                 } else {
-                    pagePart.renderedBitmap.recycle()
+                    pagePart.renderedBitmap?.recycle()
                 }
             }
         }.onFailure { exception ->
@@ -94,8 +95,8 @@ internal class RenderingHandler(
         val pdfFile = pdfView.pdfFile
         pdfFile.openPage(renderingTask.page)
 
-        val w = Math.round(renderingTask.renderingSize.width)
-        val h = Math.round(renderingTask.renderingSize.height)
+        val w = renderingTask.renderingSize.width.roundToInt()
+        val h = renderingTask.renderingSize.height.roundToInt()
 
         if (w == 0 || h == 0 || pdfFile.pageHasError(renderingTask.page)) {
             return null

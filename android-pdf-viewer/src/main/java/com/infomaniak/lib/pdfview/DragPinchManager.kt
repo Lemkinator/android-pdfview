@@ -1,406 +1,357 @@
-/**
- * Copyright 2016 Bartosz Schiller
- * <p/>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.infomaniak.lib.pdfview;
+package com.infomaniak.lib.pdfview
 
-import static com.infomaniak.lib.pdfview.util.Constants.Pinch.MAXIMUM_ZOOM;
-import static com.infomaniak.lib.pdfview.util.Constants.Pinch.MINIMUM_ZOOM;
-import static com.infomaniak.lib.pdfview.util.TouchUtils.DIRECTION_SCROLLING_LEFT;
-import static com.infomaniak.lib.pdfview.util.TouchUtils.DIRECTION_SCROLLING_RIGHT;
-
-import android.graphics.PointF;
-import android.graphics.RectF;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
-import android.view.View;
-
-import androidx.annotation.NonNull;
-
-import com.infomaniak.lib.pdfview.model.LinkTapEvent;
-import com.infomaniak.lib.pdfview.scroll.ScrollHandle;
-import com.infomaniak.lib.pdfview.util.SnapEdge;
-import com.infomaniak.lib.pdfview.util.TouchUtils;
-import com.shockwave.pdfium.PdfDocument;
-import com.shockwave.pdfium.util.SizeF;
+import android.graphics.PointF
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
+import android.view.ScaleGestureDetector.OnScaleGestureListener
+import android.view.View
+import android.view.View.OnTouchListener
+import com.infomaniak.lib.pdfview.model.LinkTapEvent
+import com.infomaniak.lib.pdfview.util.Constants.Pinch.MAXIMUM_ZOOM
+import com.infomaniak.lib.pdfview.util.Constants.Pinch.MINIMUM_ZOOM
+import com.infomaniak.lib.pdfview.util.TouchUtils
+import com.infomaniak.lib.pdfview.util.TouchUtils.Companion.handleTouchPriority
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * This Manager takes care of moving the PDFView,
  * set its zoom track user actions.
  */
-class DragPinchManager implements
-        GestureDetector.OnGestureListener,
-        GestureDetector.OnDoubleTapListener,
-        ScaleGestureDetector.OnScaleGestureListener,
-        View.OnTouchListener {
+internal class DragPinchManager(private val pdfView: PDFView, private val animationManager: AnimationManager) : GestureDetector.OnGestureListener,
+    GestureDetector.OnDoubleTapListener, OnScaleGestureListener, OnTouchListener {
 
-    private static final float MIN_TRIGGER_DELTA_X_TOUCH_PRIORITY = 150F;
-    private static final float MIN_TRIGGER_DELTA_Y_TOUCH_PRIORITY = 100F;
-    private static final float STARTING_TOUCH_POSITION_NOT_INITIALIZED = -1F;
-    private static final int TOUCH_POINTER_COUNT = 2;
+    private val gestureDetector: GestureDetector = GestureDetector(pdfView.context, this)
+    private val scaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(pdfView.context, this)
 
-    private final PDFView pdfView;
-    private final AnimationManager animationManager;
+    private var scrolling = false
+    private var scaling = false
+    var enabled = false
+    var hasTouchPriority = false
+    private var startingScrollingXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+    private var startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+    private var startingTouchYPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
 
-    private final GestureDetector gestureDetector;
-    private final ScaleGestureDetector scaleGestureDetector;
-
-    private boolean scrolling = false;
-    private boolean scaling = false;
-    private boolean enabled = false;
-    private boolean hasTouchPriority = false;
-    private float startingScrollingXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-    private float startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-    private float startingTouchYPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-
-    DragPinchManager(PDFView pdfView, AnimationManager animationManager) {
-        this.pdfView = pdfView;
-        this.animationManager = animationManager;
-        gestureDetector = new GestureDetector(pdfView.getContext(), this);
-        scaleGestureDetector = new ScaleGestureDetector(pdfView.getContext(), this);
-        pdfView.setOnTouchListener(this);
+    init {
+        pdfView.setOnTouchListener(this)
     }
 
-    void enable() {
-        enabled = true;
+    @Suppress("UsePropertyAccessSyntax")
+    fun disableLongPress() {
+        gestureDetector.setIsLongpressEnabled(false)
     }
 
-    void disable() {
-        enabled = false;
-    }
-
-    boolean hasTouchPriority() {
-        return hasTouchPriority;
-    }
-
-    void setHasTouchPriority(boolean hasTouchPriority) {
-        this.hasTouchPriority = hasTouchPriority;
-    }
-
-    void disableLongPress() {
-        gestureDetector.setIsLongpressEnabled(false);
-    }
-
-    @Override
-    public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
-        boolean onTapHandled = pdfView.callbacks.callOnTap(e);
-        boolean linkTapped = checkLinkTapped(e.getX(), e.getY());
+    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+        val onTapHandled = pdfView.callbacks.callOnTap(e)
+        val linkTapped = checkLinkTapped(e.x, e.y)
         if (!onTapHandled && !linkTapped) {
-            ScrollHandle ps = pdfView.getScrollHandle();
+            val ps = pdfView.scrollHandle
             if (ps != null && !pdfView.documentFitsView()) {
                 if (!ps.shown()) {
-                    ps.show();
+                    ps.show()
                 } else {
-                    ps.hide();
+                    ps.hide()
                 }
             }
         }
-        pdfView.performClick();
-        return true;
+        pdfView.performClick()
+        return true
     }
 
-    private boolean checkLinkTapped(float x, float y) {
-        PdfFile pdfFile = pdfView.pdfFile;
+    private fun checkLinkTapped(x: Float, y: Float): Boolean {
+        val pdfFile = pdfView.pdfFile
         if (pdfFile == null) {
-            return false;
+            return false
         }
-        float mappedX = -pdfView.getCurrentXOffset() + x;
-        float mappedY = -pdfView.getCurrentYOffset() + y;
-        int page = pdfFile.getPageAtOffset(pdfView.isSwipeVertical() ? mappedY : mappedX, pdfView.getZoom());
-        SizeF pageSize = pdfFile.getScaledPageSize(page, pdfView.getZoom());
-        int pageX, pageY;
-        if (pdfView.isSwipeVertical()) {
-            pageX = (int) pdfFile.getSecondaryPageOffset(page, pdfView.getZoom());
-            pageY = (int) pdfFile.getPageOffset(page, pdfView.getZoom());
+        val mappedX = -pdfView.currentXOffset + x
+        val mappedY = -pdfView.currentYOffset + y
+        val page = pdfFile.getPageAtOffset(if (pdfView.isSwipeVertical) mappedY else mappedX, pdfView.zoom)
+        val pageSize = pdfFile.getScaledPageSize(page, pdfView.zoom)
+        var pageX: Int
+        var pageY: Int
+        if (pdfView.isSwipeVertical) {
+            pageX = pdfFile.getSecondaryPageOffset(page, pdfView.zoom).toInt()
+            pageY = pdfFile.getPageOffset(page, pdfView.zoom).toInt()
         } else {
-            pageY = (int) pdfFile.getSecondaryPageOffset(page, pdfView.getZoom());
-            pageX = (int) pdfFile.getPageOffset(page, pdfView.getZoom());
+            pageY = pdfFile.getSecondaryPageOffset(page, pdfView.zoom).toInt()
+            pageX = pdfFile.getPageOffset(page, pdfView.zoom).toInt()
         }
-        for (PdfDocument.Link link : pdfFile.getPageLinks(page)) {
-            RectF mapped = pdfFile.mapRectToDevice(page, pageX, pageY, (int) pageSize.getWidth(), (int) pageSize.getHeight(),
-                    link.getBounds());
-            mapped.sort();
+        for (link in pdfFile.getPageLinks(page)) {
+            val mapped = pdfFile.mapRectToDevice(
+                page, pageX, pageY, pageSize.width.toInt(), pageSize.height.toInt(),
+                link.bounds
+            )
+            mapped.sort()
             if (mapped.contains(mappedX, mappedY)) {
-                pdfView.callbacks.callLinkHandler(new LinkTapEvent(x, y, mappedX, mappedY, mapped, link));
-                return true;
+                pdfView.callbacks.callLinkHandler(LinkTapEvent(x, y, mappedX, mappedY, mapped, link))
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    private void startPageFling(MotionEvent downEvent, MotionEvent ev, float velocityX,
-                                float velocityY) {
+    private fun startPageFling(
+        downEvent: MotionEvent, ev: MotionEvent, velocityX: Float,
+        velocityY: Float
+    ) {
         if (!checkDoPageFling(velocityX, velocityY)) {
-            return;
+            return
         }
-
-        int direction;
-        if (pdfView.isSwipeVertical()) {
-            direction = velocityY > 0 ? -1 : 1;
+        var direction: Int = if (pdfView.isSwipeVertical) {
+            if (velocityY > 0) -1 else 1
         } else {
-            direction = velocityX > 0 ? -1 : 1;
+            if (velocityX > 0) -1 else 1
         }
         // Get the focused page during the down event to ensure only a single page is changed
-        float delta = pdfView.isSwipeVertical() ? ev.getY() - downEvent.getY() :
-                ev.getX() - downEvent.getX();
-        float offsetX = pdfView.getCurrentXOffset() - delta * pdfView.getZoom();
-        float offsetY = pdfView.getCurrentYOffset() - delta * pdfView.getZoom();
-        int startingPage = pdfView.findFocusPage(offsetX, offsetY);
-        int targetPage = Math.max(0, Math.min(pdfView.getPageCount() - 1, startingPage + direction));
+        val delta = if (pdfView.isSwipeVertical) ev.y - downEvent.y else ev.x - downEvent.x
+        val offsetX = pdfView.currentXOffset - delta * pdfView.zoom
+        val offsetY = pdfView.currentYOffset - delta * pdfView.zoom
+        val startingPage = pdfView.findFocusPage(offsetX, offsetY)
+        val targetPage: Int = max(0, min((pdfView.getPageCount() - 1), (startingPage + direction)))
 
-        SnapEdge edge = pdfView.findSnapEdge(targetPage);
-        float offset = pdfView.snapOffsetForPage(targetPage, edge);
-        animationManager.startPageFlingAnimation(-offset);
+        val edge = pdfView.findSnapEdge(targetPage)
+        val offset = pdfView.snapOffsetForPage(targetPage, edge)
+        animationManager.startPageFlingAnimation(-offset)
     }
 
-    @Override
-    public boolean onDoubleTap(@NonNull MotionEvent e) {
-        if (!pdfView.isDoubleTapEnabled()) {
-            return false;
+    override fun onDoubleTap(e: MotionEvent): Boolean {
+        if (!pdfView.isDoubleTapEnabled) {
+            return false
         }
 
-        if (pdfView.getZoom() < pdfView.getMinZoom()) {
-            pdfView.resetZoomWithAnimation();
-        } else if (pdfView.getZoom() < pdfView.getMidZoom()) {
-            pdfView.zoomWithAnimation(e.getX(), e.getY(), pdfView.getMidZoom());
-        } else if (pdfView.getZoom() < pdfView.getMaxZoom()) {
-            pdfView.zoomWithAnimation(e.getX(), e.getY(), pdfView.getMaxZoom());
+        if (pdfView.zoom < pdfView.minZoom) {
+            pdfView.resetZoomWithAnimation()
+        } else if (pdfView.zoom < pdfView.midZoom) {
+            pdfView.zoomWithAnimation(e.x, e.y, pdfView.midZoom)
+        } else if (pdfView.zoom < pdfView.maxZoom) {
+            pdfView.zoomWithAnimation(e.x, e.y, pdfView.maxZoom)
         } else {
-            pdfView.resetZoomWithAnimation();
+            pdfView.resetZoomWithAnimation()
         }
-        return true;
+        return true
     }
 
-    @Override
-    public boolean onDoubleTapEvent(@NonNull MotionEvent e) {
-        return false;
+    override fun onDoubleTapEvent(e: MotionEvent): Boolean = false
+
+    override fun onDown(e: MotionEvent): Boolean {
+        animationManager.stopFling()
+        return true
     }
 
-    @Override
-    public boolean onDown(@NonNull MotionEvent e) {
-        animationManager.stopFling();
-        return true;
-    }
-
-    @Override
-    public void onShowPress(@NonNull MotionEvent e) {
+    override fun onShowPress(e: MotionEvent) {
         // Nothing to do here since we don't want to show anything when the user press the view
     }
 
-    @Override
-    public boolean onSingleTapUp(@NonNull MotionEvent e) {
-        return false;
-    }
+    override fun onSingleTapUp(e: MotionEvent): Boolean = false
 
-    @Override
-    public boolean onScroll(MotionEvent e1, @NonNull MotionEvent e2, float distanceX, float distanceY) {
-        scrolling = true;
-        if (pdfView.isZooming() || pdfView.isSwipeEnabled()) {
-            pdfView.moveRelativeTo(-distanceX, -distanceY);
+    override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+        scrolling = true
+        if (pdfView.isZooming || pdfView.isSwipeEnabled) {
+            pdfView.moveRelativeTo(-distanceX, -distanceY)
         }
         if (!scaling || pdfView.doRenderDuringScale()) {
-            pdfView.loadPageByOffset();
+            pdfView.loadPageByOffset()
         }
-        return true;
+        return true
     }
 
-    private void onScrollEnd() {
-        pdfView.loadPages();
-        hideHandle();
+    private fun onScrollEnd() {
+        pdfView.loadPages()
+        hideHandle()
         if (!animationManager.isFlinging()) {
-            pdfView.performPageSnap();
+            pdfView.performPageSnap()
         }
     }
 
-    @Override
-    public void onLongPress(@NonNull MotionEvent e) {
-        pdfView.callbacks.callOnLongPress(e);
+    override fun onLongPress(e: MotionEvent) {
+        pdfView.callbacks.callOnLongPress(e)
     }
 
-    @Override
-    public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
-        if (!pdfView.isSwipeEnabled()) {
-            return false;
+    override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+        if (!pdfView.isSwipeEnabled) {
+            return false
         }
-        if (pdfView.isPageFlingEnabled()) {
+        if (e1 == null) {
+            return false
+        }
+        if (pdfView.isPageFlingEnabled) {
             if (pdfView.pageFillsScreen()) {
-                onBoundedFling(velocityX, velocityY);
+                onBoundedFling(velocityX, velocityY)
             } else {
-                startPageFling(e1, e2, velocityX, velocityY);
+                startPageFling(e1, e2, velocityX, velocityY)
             }
-            return true;
+            return true
         }
 
-        int xOffset = (int) pdfView.getCurrentXOffset();
-        int yOffset = (int) pdfView.getCurrentYOffset();
+        val xOffset = pdfView.currentXOffset.toInt()
+        val yOffset = pdfView.currentYOffset.toInt()
 
-        float minX, minY;
-        PdfFile pdfFile = pdfView.pdfFile;
-        if (pdfView.isSwipeVertical()) {
-            minX = -(pdfView.toCurrentScale(pdfFile.getMaxPageWidth()) - pdfView.getWidth());
-            minY = -(pdfFile.getDocLen(pdfView.getZoom()) - pdfView.getHeight());
-        } else {
-            minX = -(pdfFile.getDocLen(pdfView.getZoom()) - pdfView.getWidth());
-            minY = -(pdfView.toCurrentScale(pdfFile.getMaxPageHeight()) - pdfView.getHeight());
+        var minX: Float
+        var minY: Float
+        pdfView.pdfFile?.apply {
+            if (pdfView.isSwipeVertical) {
+                minX = -(pdfView.toCurrentScale(maxPageWidth) - pdfView.width)
+                minY = -(getDocLen(pdfView.zoom) - pdfView.height)
+            } else {
+                minX = -(getDocLen(pdfView.zoom) - pdfView.width)
+                minY = -(pdfView.toCurrentScale(maxPageHeight) - pdfView.height)
+            }
+            animationManager.startFlingAnimation(
+                xOffset, yOffset, (velocityX).toInt(), (velocityY).toInt(), minX.toInt(), 0, minY.toInt(),
+                0
+            )
         }
-
-        animationManager.startFlingAnimation(xOffset, yOffset, (int) (velocityX), (int) (velocityY), (int) minX, 0, (int) minY,
-                0);
-        return true;
+        return true
     }
 
-    private void onBoundedFling(float velocityX, float velocityY) {
-        int xOffset = (int) pdfView.getCurrentXOffset();
-        int yOffset = (int) pdfView.getCurrentYOffset();
+    private fun onBoundedFling(velocityX: Float, velocityY: Float) {
+        val xOffset = pdfView.currentXOffset.toInt()
+        val yOffset = pdfView.currentYOffset.toInt()
 
-        PdfFile pdfFile = pdfView.pdfFile;
+        val pdfFile = pdfView.pdfFile
 
-        float pageStart = -pdfFile.getPageOffset(pdfView.getCurrentPage(), pdfView.getZoom());
-        float pageEnd = pageStart - pdfFile.getPageLength(pdfView.getCurrentPage(), pdfView.getZoom());
-        float minX, minY, maxX, maxY;
-        if (pdfView.isSwipeVertical()) {
-            minX = -(pdfView.toCurrentScale(pdfFile.getMaxPageWidth()) - pdfView.getWidth());
-            minY = pageEnd + pdfView.getHeight();
-            maxX = 0;
-            maxY = pageStart;
+        val pageStart = -pdfFile.getPageOffset(pdfView.currentPage, pdfView.zoom)
+        val pageEnd = pageStart - pdfFile.getPageLength(pdfView.currentPage, pdfView.zoom)
+        var minX: Float
+        var minY: Float
+        var maxX: Float
+        var maxY: Float
+        if (pdfView.isSwipeVertical) {
+            minX = -(pdfView.toCurrentScale(pdfFile.maxPageWidth) - pdfView.width)
+            minY = pageEnd + pdfView.height
+            maxX = 0f
+            maxY = pageStart
         } else {
-            minX = pageEnd + pdfView.getWidth();
-            minY = -(pdfView.toCurrentScale(pdfFile.getMaxPageHeight()) - pdfView.getHeight());
-            maxX = pageStart;
-            maxY = 0;
+            minX = pageEnd + pdfView.width
+            minY = -(pdfView.toCurrentScale(pdfFile.maxPageHeight) - pdfView.height)
+            maxX = pageStart
+            maxY = 0f
         }
 
-        animationManager.startFlingAnimation(xOffset, yOffset, (int) (velocityX), (int) (velocityY), (int) minX, (int) maxX,
-                (int) minY, (int) maxY);
+        animationManager.startFlingAnimation(
+            xOffset, yOffset, (velocityX).toInt(), (velocityY).toInt(), minX.toInt(), maxX.toInt(),
+            minY.toInt(), maxY.toInt()
+        )
     }
 
-    @Override
-    public boolean onScale(ScaleGestureDetector detector) {
-        float dr = detector.getScaleFactor();
-        float wantedZoom = pdfView.getZoom() * dr;
-        float minZoom = Math.min(MINIMUM_ZOOM, pdfView.getMinZoom());
-        float maxZoom = Math.max(MAXIMUM_ZOOM, pdfView.getMaxZoom());
+    override fun onScale(detector: ScaleGestureDetector): Boolean {
+        var dr = detector.getScaleFactor()
+        val wantedZoom = pdfView.zoom * dr
+        val minZoom: Float = min(MINIMUM_ZOOM, pdfView.minZoom)
+        val maxZoom: Float = max(MAXIMUM_ZOOM, pdfView.maxZoom)
         if (wantedZoom < minZoom) {
-            dr = minZoom / pdfView.getZoom();
+            dr = minZoom / pdfView.zoom
         } else if (wantedZoom > maxZoom) {
-            dr = maxZoom / pdfView.getZoom();
+            dr = maxZoom / pdfView.zoom
         }
-        pdfView.zoomCenteredRelativeTo(dr, new PointF(detector.getFocusX(), detector.getFocusY()));
-        return true;
+        pdfView.zoomCenteredRelativeTo(dr, PointF(detector.focusX, detector.focusY))
+        return true
     }
 
-    @Override
-    public boolean onScaleBegin(@NonNull ScaleGestureDetector detector) {
-        scaling = true;
-        return true;
+    override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+        scaling = true
+        return true
     }
 
-    @Override
-    public void onScaleEnd(@NonNull ScaleGestureDetector detector) {
-        pdfView.loadPages();
-        hideHandle();
-        scaling = false;
+    override fun onScaleEnd(detector: ScaleGestureDetector) {
+        pdfView.loadPages()
+        hideHandle()
+        scaling = false
     }
 
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
+    override fun onTouch(v: View, event: MotionEvent): Boolean {
         if (!enabled) {
-            return false;
+            return false
         }
 
-        boolean retVal = scaleGestureDetector.onTouchEvent(event);
-        retVal = gestureDetector.onTouchEvent(event) || retVal;
+        var retVal = scaleGestureDetector.onTouchEvent(event)
+        retVal = gestureDetector.onTouchEvent(event) || retVal
 
-        if (event.getAction() == MotionEvent.ACTION_MOVE && event.getPointerCount() >= TOUCH_POINTER_COUNT) {
-            startingScrollingXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-            startingTouchYPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
+        if (event.action == MotionEvent.ACTION_MOVE && event.pointerCount >= TOUCH_POINTER_COUNT) {
+            startingScrollingXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+            startingTouchYPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
         }
 
-        if (event.getAction() == MotionEvent.ACTION_UP && scrolling) {
-            startingScrollingXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-            startingTouchYPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
-            scrolling = false;
-            onScrollEnd();
+        if (event.action == MotionEvent.ACTION_UP && scrolling) {
+            startingScrollingXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+            startingTouchYPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+            scrolling = false
+            onScrollEnd()
         }
 
         if (hasTouchPriority) {
-            TouchUtils.handleTouchPriority(
-                    event,
-                    v,
-                    TOUCH_POINTER_COUNT,
-                    shouldOverrideTouchPriority(v, event),
-                    pdfView.isZooming()
-            );
+            handleTouchPriority(
+                event,
+                v,
+                TOUCH_POINTER_COUNT,
+                shouldOverrideTouchPriority(v, event),
+                pdfView.isZooming
+            )
         }
 
-        return retVal;
+        return retVal
     }
 
-    private boolean shouldOverrideTouchPriority(View v, MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            startingScrollingXPosition = event.getX();
-            if (!v.canScrollHorizontally(DIRECTION_SCROLLING_LEFT) || !v.canScrollHorizontally(DIRECTION_SCROLLING_RIGHT)) {
-                startingTouchXPosition = event.getX();
+    private fun shouldOverrideTouchPriority(v: View, event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            startingScrollingXPosition = event.x
+            startingTouchXPosition = if (!v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_LEFT) || !v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT)) {
+                event.x
             } else {
-                startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
+                STARTING_TOUCH_POSITION_NOT_INITIALIZED
             }
-            startingTouchYPosition = event.getY();
+            startingTouchYPosition = event.y
         }
 
-        int scrollDirection = getScrollingDirection(event.getX());
+        val scrollDirection = getScrollingDirection(event.x)
 
-        boolean canScrollLeft = v.canScrollHorizontally(DIRECTION_SCROLLING_LEFT);
-        boolean canScrollRight = v.canScrollHorizontally(DIRECTION_SCROLLING_RIGHT);
-        boolean canScrollHorizontally = canScrollLeft && canScrollRight;
-        boolean isScrollingBlocked =
-                (!canScrollRight && scrollDirection == DIRECTION_SCROLLING_LEFT)
-                        || (!canScrollLeft && scrollDirection == DIRECTION_SCROLLING_RIGHT);
+        val canScrollLeft = v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_LEFT)
+        val canScrollRight = v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT)
+        val canScrollHorizontally = canScrollLeft && canScrollRight
+        val isScrollingBlocked =
+            (!canScrollRight && scrollDirection == TouchUtils.Companion.DIRECTION_SCROLLING_LEFT)
+                    || (!canScrollLeft && scrollDirection == TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT)
 
-        if (event.getAction() == MotionEvent.ACTION_MOVE && canScrollHorizontally) {
-            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED;
+        if (event.action == MotionEvent.ACTION_MOVE && canScrollHorizontally) {
+            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
         }
 
         if (!isScrollingBlocked || startingTouchXPosition == STARTING_TOUCH_POSITION_NOT_INITIALIZED) {
-            return false;
+            return false
         } else {
-            float deltaX = Math.abs(event.getX() - startingTouchXPosition);
-            float deltaY = Math.abs(event.getY() - startingTouchYPosition);
-            return deltaX >= MIN_TRIGGER_DELTA_X_TOUCH_PRIORITY && deltaY < MIN_TRIGGER_DELTA_Y_TOUCH_PRIORITY;
+            val deltaX: Float = abs((event.x - startingTouchXPosition))
+            val deltaY: Float = abs((event.y - startingTouchYPosition))
+            return deltaX >= MIN_TRIGGER_DELTA_X_TOUCH_PRIORITY && deltaY < MIN_TRIGGER_DELTA_Y_TOUCH_PRIORITY
         }
     }
 
-    private int getScrollingDirection(float x) {
-        if (x > startingScrollingXPosition) {
-            return DIRECTION_SCROLLING_RIGHT;
-        } else {
-            return DIRECTION_SCROLLING_LEFT;
-        }
+    private fun getScrollingDirection(x: Float): Int = if (x > startingScrollingXPosition) {
+        TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT
+    } else {
+        TouchUtils.Companion.DIRECTION_SCROLLING_LEFT
     }
 
-    private void hideHandle() {
-        ScrollHandle scrollHandle = pdfView.getScrollHandle();
+    private fun hideHandle() {
+        val scrollHandle = pdfView.scrollHandle
         if (scrollHandle != null && scrollHandle.shown()) {
-            scrollHandle.hideDelayed();
+            scrollHandle.hideDelayed()
         }
     }
 
-    private boolean checkDoPageFling(float velocityX, float velocityY) {
-        float absX = Math.abs(velocityX);
-        float absY = Math.abs(velocityY);
-        return pdfView.isSwipeVertical() ? absY > absX : absX > absY;
+    private fun checkDoPageFling(velocityX: Float, velocityY: Float): Boolean {
+        val absX: Float = abs(velocityX)
+        val absY: Float = abs(velocityY)
+        return if (pdfView.isSwipeVertical) absY > absX else absX > absY
+    }
+
+    companion object {
+        private const val MIN_TRIGGER_DELTA_X_TOUCH_PRIORITY = 150f
+        private const val MIN_TRIGGER_DELTA_Y_TOUCH_PRIORITY = 100f
+        private const val STARTING_TOUCH_POSITION_NOT_INITIALIZED = -1f
+        private const val TOUCH_POINTER_COUNT = 2
     }
 }

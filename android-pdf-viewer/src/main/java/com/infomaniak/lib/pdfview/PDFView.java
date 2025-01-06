@@ -34,13 +34,13 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.HandlerThread;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.widget.RelativeLayout;
 
 import androidx.annotation.FloatRange;
+import androidx.annotation.NonNull;
 
 import com.infomaniak.lib.pdfview.exception.PageRenderingException;
 import com.infomaniak.lib.pdfview.link.DefaultLinkHandler;
@@ -68,7 +68,6 @@ import com.infomaniak.lib.pdfview.source.InputStreamSource;
 import com.infomaniak.lib.pdfview.source.UriSource;
 import com.infomaniak.lib.pdfview.util.Constants;
 import com.infomaniak.lib.pdfview.util.FitPolicy;
-import com.infomaniak.lib.pdfview.util.MathUtils;
 import com.infomaniak.lib.pdfview.util.SnapEdge;
 import com.infomaniak.lib.pdfview.util.Util;
 import com.shockwave.pdfium.PdfDocument;
@@ -278,7 +277,7 @@ public class PDFView extends RelativeLayout {
      * Antialiasing and bitmap filtering
      */
     private boolean enableAntialiasing = true;
-    private PaintFlagsDrawFilter antialiasFilter =
+    private final PaintFlagsDrawFilter antialiasFilter =
             new PaintFlagsDrawFilter(0, Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
 
     /**
@@ -309,7 +308,7 @@ public class PDFView extends RelativeLayout {
     /**
      * Pages numbers used when calling onDrawAllListener
      */
-    private List<Integer> onDrawPagesNums = new ArrayList<>(10);
+    private final List<Integer> onDrawPagesNums = new ArrayList<>(10);
 
     /**
      * Holds info whether view has been added to layout and has width and height
@@ -364,7 +363,7 @@ public class PDFView extends RelativeLayout {
 
         recycled = false;
         // Start decoding document
-        decodingAsyncTask = new DecodingAsyncTask(docSource, password, userPages, this, pdfiumCore);
+        decodingAsyncTask = new DecodingAsyncTask(this, docSource, password, userPages, pdfiumCore);
         decodingAsyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
@@ -436,7 +435,7 @@ public class PDFView extends RelativeLayout {
         } else {
             offset = -currentXOffset / (pdfFile.getDocLen(zoom) - getWidth());
         }
-        return MathUtils.limit(offset, 0, 1);
+        return Math.max(0, Math.min(offset, 1));
     }
 
     /**
@@ -507,7 +506,7 @@ public class PDFView extends RelativeLayout {
         waitingDocumentConfigurator = null;
 
         animationManager.stopAll();
-        dragPinchManager.disable();
+        dragPinchManager.setEnabled(false);
 
         // Stop tasks
         if (renderingHandler != null) {
@@ -570,11 +569,7 @@ public class PDFView extends RelativeLayout {
         callbacks.callOnDetachComplete();
         recycle();
         if (renderingHandlerThread != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                renderingHandlerThread.quitSafely();
-            } else {
-                renderingHandlerThread.quit();
-            }
+            renderingHandlerThread.quitSafely();
             renderingHandlerThread = null;
         }
         super.onDetachedFromWindow();
@@ -628,17 +623,12 @@ public class PDFView extends RelativeLayout {
         if (swipeVertical) {
             if (direction < 0 && currentXOffset < 0) {
                 return true;
-            } else if (direction > 0 && currentXOffset + toCurrentScale(pdfFile.getMaxPageWidth()) > getWidth()) {
-                return true;
-            }
+            } else return direction > 0 && currentXOffset + toCurrentScale(pdfFile.getMaxPageWidth()) > getWidth();
         } else {
             if (direction < 0 && currentXOffset < 0) {
                 return true;
-            } else if (direction > 0 && currentXOffset + pdfFile.getDocLen(zoom) > getWidth()) {
-                return true;
-            }
+            } else return direction > 0 && currentXOffset + pdfFile.getDocLen(zoom) > getWidth();
         }
-        return false;
     }
 
     @Override
@@ -650,21 +640,16 @@ public class PDFView extends RelativeLayout {
         if (swipeVertical) {
             if (direction < 0 && currentYOffset < 0) {
                 return true;
-            } else if (direction > 0 && currentYOffset + pdfFile.getDocLen(zoom) > getHeight()) {
-                return true;
-            }
+            } else return direction > 0 && currentYOffset + pdfFile.getDocLen(zoom) > getHeight();
         } else {
             if (direction < 0 && currentYOffset < 0) {
                 return true;
-            } else if (direction > 0 && currentYOffset + toCurrentScale(pdfFile.getMaxPageHeight()) > getHeight()) {
-                return true;
-            }
+            } else return direction > 0 && currentYOffset + toCurrentScale(pdfFile.getMaxPageHeight()) > getHeight();
         }
-        return false;
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         if (isInEditMode()) {
             return;
         }
@@ -784,8 +769,8 @@ public class PDFView extends RelativeLayout {
         }
 
         // Move to the target page
-        float localTranslationX = 0;
-        float localTranslationY = 0;
+        float localTranslationX;
+        float localTranslationY;
         SizeF size = pdfFile.getPageSize(part.getPage());
 
         if (swipeVertical) {
@@ -891,7 +876,7 @@ public class PDFView extends RelativeLayout {
             isScrollHandleInit = true;
         }
 
-        dragPinchManager.enable();
+        dragPinchManager.setEnabled(true);
 
         callbacks.callOnLoadComplete(pdfFile.getPagesCount());
 
@@ -1006,7 +991,7 @@ public class PDFView extends RelativeLayout {
                 float maxOffsetX = toCurrentScale((horizontalBorder * 2f) - startSpacing);
                 if (offsetX > maxOffsetX) { // left visible
                     offsetX = maxOffsetX;
-                } else if (offsetX + contentWidth + toCurrentScale((horizontalBorder * 2f)) < getWidth()  + toCurrentScale(endSpacing)) { // right visible
+                } else if (offsetX + contentWidth + toCurrentScale((horizontalBorder * 2f)) < getWidth() + toCurrentScale(endSpacing)) { // right visible
                     offsetX = -contentWidth + getWidth() + toCurrentScale(endSpacing - (horizontalBorder * 2f));
                 }
             }
@@ -1272,7 +1257,7 @@ public class PDFView extends RelativeLayout {
     }
 
     public void zoomWithAnimation(float scale) {
-        animationManager.startZoomAnimation(getWidth() / 2, getHeight() / 2, zoom, scale);
+        animationManager.startZoomAnimation((float) getWidth() / 2, (float) getHeight() / 2, zoom, scale);
     }
 
     private void setScrollHandle(ScrollHandle scrollHandle) {
@@ -1756,6 +1741,7 @@ public class PDFView extends RelativeLayout {
         /**
          * By default, generated bitmaps are compressed with {@link Bitmap.Config#RGB_565} format to reduce memory consumption.
          * If {@link #useBestQuality} is true, rendering will be done with {@link Bitmap.Config#ARGB_8888}.
+         *
          * @param useBestQuality true to use {@link Bitmap.Config#ARGB_8888}, false for {@link Bitmap.Config#RGB_565}
          */
         public Configurator useBestQuality(boolean useBestQuality) {

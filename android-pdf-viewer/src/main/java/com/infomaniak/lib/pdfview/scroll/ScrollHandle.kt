@@ -1,57 +1,56 @@
-package com.infomaniak.lib.pdfview.scroll;
+package com.infomaniak.lib.pdfview.scroll
 
-import com.infomaniak.lib.pdfview.PDFView;
+import com.infomaniak.lib.pdfview.PDFView
 
-public interface ScrollHandle {
-
+interface ScrollHandle {
     /**
      * Used to move the handle, called internally by PDFView
      *
      * @param position current scroll ratio between 0 and 1
      */
-    void setScroll(float position);
+    fun setScroll(position: Float)
 
     /**
      * Method called by PDFView after setting scroll handle.
      * Do not call this method manually.
-     * For usage sample see {@link DefaultScrollHandle}
+     * For usage sample see [DefaultScrollHandle]
      *
      * @param pdfView PDFView instance
      */
-    void setupLayout(PDFView pdfView);
+    fun setupLayout(pdfView: PDFView)
 
     /**
      * Method called by PDFView when handle should be removed from layout
      * Do not call this method manually.
      */
-    void destroyLayout();
+    fun destroyLayout()
 
     /**
      * Set page number displayed on handle
      *
      * @param pageNum page number
      */
-    void setPageNum(int pageNum);
+    fun setPageNum(pageNum: Int)
 
     /**
      * Get handle visibility
      *
      * @return true if handle is visible, false otherwise
      */
-    boolean shown();
+    fun shown(): Boolean
 
     /**
      * Show handle
      */
-    void show();
+    fun show()
 
     /**
      * Hide handle immediately
      */
-    void hide();
+    fun hide()
 
     /**
      * Hide handle after some time (defined by implementation)
      */
-    void hideDelayed();
+    fun hideDelayed()
 }

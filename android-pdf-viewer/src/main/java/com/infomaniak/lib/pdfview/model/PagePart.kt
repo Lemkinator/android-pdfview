@@ -1,80 +1,34 @@
-/**
- * Copyright 2016 Bartosz Schiller
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.infomaniak.lib.pdfview.model;
+package com.infomaniak.lib.pdfview.model
 
-import android.graphics.Bitmap;
-import android.graphics.RectF;
+import android.graphics.Bitmap
+import android.graphics.RectF
 
-public class PagePart {
-
-    private int page;
-
-    private Bitmap renderedBitmap;
-
-    private RectF pageRelativeBounds;
-
-    private boolean thumbnail;
-
-    private int cacheOrder;
-
-    public PagePart(int page, Bitmap renderedBitmap, RectF pageRelativeBounds, boolean thumbnail, int cacheOrder) {
-        super();
-        this.page = page;
-        this.renderedBitmap = renderedBitmap;
-        this.pageRelativeBounds = pageRelativeBounds;
-        this.thumbnail = thumbnail;
-        this.cacheOrder = cacheOrder;
-    }
-
-    public int getCacheOrder() {
-        return cacheOrder;
-    }
-
-    public void setCacheOrder(int cacheOrder) {
-        this.cacheOrder = cacheOrder;
-    }
-
-    public int getPage() {
-        return page;
-    }
-
-    public Bitmap getRenderedBitmap() {
-        return renderedBitmap;
-    }
-
-    public RectF getPageRelativeBounds() {
-        return pageRelativeBounds;
-    }
-
-    public boolean isThumbnail() {
-        return thumbnail;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof PagePart)) {
-            return false;
+data class PagePart(
+    val page: Int,
+    val renderedBitmap: Bitmap?,
+    val pageRelativeBounds: RectF,
+    val isThumbnail: Boolean,
+    var cacheOrder: Int
+) {
+    override fun equals(obj: Any?): Boolean {
+        if (obj !is PagePart) {
+            return false
         }
 
-        PagePart part = (PagePart) obj;
-        return part.getPage() == page
-                && part.getPageRelativeBounds().left == pageRelativeBounds.left
-                && part.getPageRelativeBounds().right == pageRelativeBounds.right
-                && part.getPageRelativeBounds().top == pageRelativeBounds.top
-                && part.getPageRelativeBounds().bottom == pageRelativeBounds.bottom;
+        return obj.page == page &&
+                obj.pageRelativeBounds.left == pageRelativeBounds.left
+                && obj.pageRelativeBounds.right == pageRelativeBounds.right
+                && obj.pageRelativeBounds.top == pageRelativeBounds.top
+                && obj.pageRelativeBounds.bottom == pageRelativeBounds.bottom
     }
 
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + page
+        result = 31 * result + (renderedBitmap?.hashCode() ?: 0)
+        result = 31 * result + pageRelativeBounds.hashCode()
+        result = 31 * result + isThumbnail.hashCode()
+        result = 31 * result + cacheOrder
+        return result
+    }
 }
