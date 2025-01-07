@@ -45,7 +45,7 @@ internal class DragPinchManager(private val pdfView: PDFView, private val animat
     }
 
     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-        val onTapHandled = pdfView.callbacks.callOnTap(e)
+        val onTapHandled = pdfView.onTapListener?.onTap(e) == true
         val linkTapped = checkLinkTapped(e.x, e.y)
         if (!onTapHandled && !linkTapped) {
             val ps = pdfView.scrollHandle
@@ -86,7 +86,7 @@ internal class DragPinchManager(private val pdfView: PDFView, private val animat
             )
             mapped.sort()
             if (mapped.contains(mappedX, mappedY)) {
-                pdfView.callbacks.callLinkHandler(LinkTapEvent(x, y, mappedX, mappedY, mapped, link))
+                pdfView.linkHandler?.handleLinkEvent(LinkTapEvent(x, y, mappedX, mappedY, mapped, link))
                 return true
             }
         }
@@ -167,7 +167,7 @@ internal class DragPinchManager(private val pdfView: PDFView, private val animat
     }
 
     override fun onLongPress(e: MotionEvent) {
-        pdfView.callbacks.callOnLongPress(e)
+        pdfView.onLongPressListener?.onLongPress(e)
     }
 
     override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {

@@ -1,6 +1,5 @@
-package com.infomaniak.lib.pdfview.listener;
+package com.infomaniak.lib.pdfview.listener
 
-public interface OnAttachCompleteListener {
-
-    void onAttachComplete();
+fun interface OnAttachCompleteListener {
+    fun onAttachComplete()
 }

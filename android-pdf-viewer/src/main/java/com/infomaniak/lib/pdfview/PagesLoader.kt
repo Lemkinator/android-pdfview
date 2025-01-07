@@ -315,7 +315,7 @@ internal class PagesLoader(private val pdfView: PDFView) {
                 isForPrinting
             )
         } else if (page == pdfView.getPageCount() - 1 && isForPrinting) {
-            pdfView.callbacks.callsOnReadyForPrinting(pdfView.getPagesAsBitmaps())
+            pdfView.onBitmapsReadyListener?.bitmapsReady(pdfView.getPagesAsBitmaps())
         }
     }
 
