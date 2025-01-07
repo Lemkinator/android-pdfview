@@ -28,12 +28,12 @@ internal class DecodingAsyncTask(
                     pdfView.pageSeparatorSpacing,
                     pdfView.startSpacing,
                     pdfView.endSpacing,
-                    pdfView.isAutoSpacingEnabled
+                    pdfView.autoSpacing
                 )
                 val displayOptions = DisplayOptions(
-                    pdfView.isSwipeVertical,
+                    pdfView.swipeVertical,
                     pdfSpacing,
-                    pdfView.isFitEachPage,
+                    pdfView.fitEachPage,
                     getViewSize(pdfView),
                     pdfView.pageFitPolicy
                 )

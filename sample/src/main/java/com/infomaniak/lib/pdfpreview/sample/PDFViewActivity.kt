@@ -62,7 +62,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
         if (activityResult.resultCode == RESULT_OK) {
             activityResult.data?.let { intent ->
                 uri = intent.data
-                displayFromUri(uri)
+                uri?.let { displayFromUri(it) }
             }
         }
     }
@@ -99,11 +99,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
 
     private fun initializePDFView() {
         binding.pdfView.setBackgroundColor(Color.LTGRAY)
-        if (uri != null) {
-            displayFromUri(uri)
-        } else {
-            displayFromAsset()
-        }
+        uri?.let { displayFromUri(it) } ?: displayFromAsset()
         title = pdfFileName
     }
 
@@ -122,7 +118,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
         loadPDF(binding.pdfView.fromAsset(SAMPLE_FILE), password)
     }
 
-    private fun displayFromUri(uri: Uri?, password: String? = null) {
+    private fun displayFromUri(uri: Uri, password: String? = null) {
         pdfFileName = viewModel.getFileName(contentResolver, uri)
         loadPDF(binding.pdfView.fromUri(uri), password)
     }
@@ -144,7 +140,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
 
     private fun openPasswordDialog() {
         PasswordDialog(
-            onPasswordEntered = { password -> displayFromUri(uri, password) },
+            onPasswordEntered = { password -> uri?.let { displayFromUri(it, password) } },
         ).also { it.show(supportFragmentManager, "TAG") }
     }
 
@@ -157,14 +153,14 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
 
     override fun loadComplete(nbPages: Int) {
         val meta = binding.pdfView.documentMeta
-        Log.e(TAG, "title = " + meta.title)
-        Log.e(TAG, "author = " + meta.author)
-        Log.e(TAG, "subject = " + meta.subject)
-        Log.e(TAG, "keywords = " + meta.keywords)
-        Log.e(TAG, "creator = " + meta.creator)
-        Log.e(TAG, "producer = " + meta.producer)
-        Log.e(TAG, "creationDate = " + meta.creationDate)
-        Log.e(TAG, "modDate = " + meta.modDate)
+        Log.e(TAG, "title = " + meta?.title)
+        Log.e(TAG, "author = " + meta?.author)
+        Log.e(TAG, "subject = " + meta?.subject)
+        Log.e(TAG, "keywords = " + meta?.keywords)
+        Log.e(TAG, "creator = " + meta?.creator)
+        Log.e(TAG, "producer = " + meta?.producer)
+        Log.e(TAG, "creationDate = " + meta?.creationDate)
+        Log.e(TAG, "modDate = " + meta?.modDate)
         printBookmarksTree(binding.pdfView.tableOfContents, "-")
     }
 

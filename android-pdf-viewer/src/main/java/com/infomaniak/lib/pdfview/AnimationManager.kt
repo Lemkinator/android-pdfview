@@ -73,7 +73,7 @@ internal class AnimationManager(private val pdfView: PDFView) {
     }
 
     fun startPageFlingAnimation(targetOffset: Float) {
-        if (pdfView.isSwipeVertical) {
+        if (pdfView.swipeVertical) {
             startYAnimation(pdfView.currentYOffset, targetOffset)
         } else {
             startXAnimation(pdfView.currentXOffset, targetOffset)

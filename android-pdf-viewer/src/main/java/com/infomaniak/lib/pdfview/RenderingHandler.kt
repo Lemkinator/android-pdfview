@@ -36,7 +36,7 @@ import kotlin.math.roundToInt
  * and alert [PDFView.onBitmapRendered] when the portion of the
  * PDF is ready to render.
  */
-internal class RenderingHandler(
+class RenderingHandler(
     looper: Looper?,
     private val pdfView: PDFView,
 ) : Handler(looper!!) {
@@ -93,6 +93,10 @@ internal class RenderingHandler(
     @Throws(PageRenderingException::class)
     private fun proceed(renderingTask: RenderingTask): PagePart? {
         val pdfFile = pdfView.pdfFile
+        if (pdfFile == null) {
+            Log.e(TAG, "proceed: pdfView.pdfFile is null.")
+            return null
+        }
         pdfFile.openPage(renderingTask.page)
 
         val w = renderingTask.renderingSize.width.roundToInt()

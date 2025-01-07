@@ -51,7 +51,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
 
     private fun setHandleRelativePosition(pdfView: PDFView) {
         // determine handler position, default is right (when scrolling vertically) or bottom (when scrolling horizontally)
-        if (pdfView.isSwipeVertical) {
+        if (pdfView.swipeVertical) {
             handleAlign = if (inverted) ALIGN_PARENT_LEFT else ALIGN_PARENT_RIGHT
         } else {
             val tempWidth = handleWidth
@@ -146,7 +146,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
             handler.removeCallbacks(hidePageScrollerRunnable)
         }
         if (pdfView != null) {
-            setPosition((if (pdfView!!.isSwipeVertical) pdfView!!.height else pdfView!!.width) * position)
+            setPosition((if (pdfView!!.swipeVertical) pdfView!!.height else pdfView!!.width) * position)
         }
     }
 
@@ -157,7 +157,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
         }
         var pdfViewSize: Float
         var handleSize: Int
-        if (pdfView!!.isSwipeVertical) {
+        if (pdfView!!.swipeVertical) {
             pdfViewSize = pdfView!!.height.toFloat()
             handleSize = handleHeight
         } else {
@@ -173,7 +173,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
             pos = maxBound
         }
 
-        if (pdfView!!.isSwipeVertical) {
+        if (pdfView!!.swipeVertical) {
             y = pos
         } else {
             x = pos
@@ -196,7 +196,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
         var pos: Float
         var viewSize: Float
         var pdfViewSize: Float
-        if (pdfView!!.isSwipeVertical) {
+        if (pdfView!!.swipeVertical) {
             pos = y
             viewSize = height.toFloat()
             pdfViewSize = pdfView!!.height.toFloat()
@@ -332,7 +332,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 pdfView!!.stopFling()
                 handler.removeCallbacks(hidePageScrollerRunnable)
-                currentPos = if (pdfView!!.isSwipeVertical) {
+                currentPos = if (pdfView!!.swipeVertical) {
                     event.rawY - y
                 } else {
                     event.rawX - x
@@ -340,7 +340,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                if (pdfView!!.isSwipeVertical) {
+                if (pdfView!!.swipeVertical) {
                     setPosition(event.rawY - currentPos + relativeHandlerMiddle)
                     pdfView!!.setPositionOffset(relativeHandlerMiddle / height, false)
                 } else {

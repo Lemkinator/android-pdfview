@@ -301,9 +301,9 @@ class PdfFile(
         return pdfiumCore.getDocumentMeta(pdfDocument)
     }
 
-    fun getBookmarks(): MutableList<PdfDocument.Bookmark?>? {
+    fun getBookmarks(): MutableList<PdfDocument.Bookmark> {
         if (pdfDocument == null) {
-            return ArrayList<PdfDocument.Bookmark?>()
+            return ArrayList<PdfDocument.Bookmark>()
         }
         return pdfiumCore.getTableOfContents(pdfDocument)
     }

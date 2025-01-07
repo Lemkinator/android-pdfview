@@ -1,6 +1,7 @@
 package com.infomaniak.lib.pdfview
 
 import android.graphics.RectF
+import android.util.Log
 import com.infomaniak.lib.pdfview.PagesLoader.GridSize
 import com.infomaniak.lib.pdfview.PagesLoader.RenderRange
 import com.infomaniak.lib.pdfview.RenderingHandler.RenderingSize
@@ -57,7 +58,12 @@ internal class PagesLoader(private val pdfView: PDFView) {
     fun loadPagesForPrinting(pagesCount: Int) = loadAllForPrinting(pagesCount)
 
     private fun getPageColsRows(grid: GridSize, pageIndex: Int) {
-        val size = pdfView.pdfFile.getPageSize(pageIndex)
+        val pdfFile = pdfView.pdfFile
+        if (pdfFile == null) {
+            Log.e("PagesLoader", "getPageColsRows: pdfFile is null")
+            return
+        }
+        val size = pdfFile.getPageSize(pageIndex)
         val ratioX = 1f / size.width
         val ratioY = 1f / size.height
         val partHeight = (Constants.PART_SIZE * ratioY) / pdfView.zoom
@@ -88,11 +94,17 @@ internal class PagesLoader(private val pdfView: PDFView) {
         val fixedLastXOffset: Float = -min(lastXOffset, 0f)
         val fixedLastYOffset: Float = -min(lastYOffset, 0f)
 
-        val offsetFirst = if (pdfView.isSwipeVertical) fixedFirstYOffset else fixedFirstXOffset
-        val offsetLast = if (pdfView.isSwipeVertical) fixedLastYOffset else fixedLastXOffset
+        val offsetFirst = if (pdfView.swipeVertical) fixedFirstYOffset else fixedFirstXOffset
+        val offsetLast = if (pdfView.swipeVertical) fixedLastYOffset else fixedLastXOffset
 
-        val firstPage = pdfView.pdfFile.getPageAtOffset(offsetFirst, pdfView.zoom)
-        val lastPage = pdfView.pdfFile.getPageAtOffset(offsetLast, pdfView.zoom)
+        val pdfFile = pdfView.pdfFile
+        if (pdfFile == null) {
+            Log.e("PagesLoader", "getRenderRangeList: pdfFile is null")
+            return LinkedList()
+        }
+
+        val firstPage = pdfFile.getPageAtOffset(offsetFirst, pdfView.zoom)
+        val lastPage = pdfFile.getPageAtOffset(offsetLast, pdfView.zoom)
         val pageCount = lastPage - firstPage + 1
 
         val renderRanges: MutableList<RenderRange> = LinkedList<RenderRange>()
@@ -112,9 +124,9 @@ internal class PagesLoader(private val pdfView: PDFView) {
                     pageLastXOffset = fixedLastXOffset
                     pageLastYOffset = fixedLastYOffset
                 } else {
-                    val pageOffset = pdfView.pdfFile.getPageOffset(page, pdfView.zoom)
-                    val pageSize = pdfView.pdfFile.getScaledPageSize(page, pdfView.zoom)
-                    if (pdfView.isSwipeVertical) {
+                    val pageOffset = pdfFile.getPageOffset(page, pdfView.zoom)
+                    val pageSize = pdfFile.getScaledPageSize(page, pdfView.zoom)
+                    if (pdfView.swipeVertical) {
                         pageLastXOffset = fixedLastXOffset
                         pageLastYOffset = pageOffset + pageSize.height
                     } else {
@@ -123,9 +135,9 @@ internal class PagesLoader(private val pdfView: PDFView) {
                     }
                 }
             } else if (page == lastPage) {
-                val pageOffset = pdfView.pdfFile.getPageOffset(page, pdfView.zoom)
+                val pageOffset = pdfFile.getPageOffset(page, pdfView.zoom)
 
-                if (pdfView.isSwipeVertical) {
+                if (pdfView.swipeVertical) {
                     pageFirstXOffset = fixedFirstXOffset
                     pageFirstYOffset = pageOffset
                 } else {
@@ -136,9 +148,9 @@ internal class PagesLoader(private val pdfView: PDFView) {
                 pageLastXOffset = fixedLastXOffset
                 pageLastYOffset = fixedLastYOffset
             } else {
-                val pageOffset = pdfView.pdfFile.getPageOffset(page, pdfView.zoom)
-                val pageSize = pdfView.pdfFile.getScaledPageSize(page, pdfView.zoom)
-                if (pdfView.isSwipeVertical) {
+                val pageOffset = pdfFile.getPageOffset(page, pdfView.zoom)
+                val pageSize = pdfFile.getScaledPageSize(page, pdfView.zoom)
+                if (pdfView.swipeVertical) {
                     pageFirstXOffset = fixedFirstXOffset
                     pageFirstYOffset = pageOffset
 
@@ -154,7 +166,7 @@ internal class PagesLoader(private val pdfView: PDFView) {
             }
 
             getPageColsRows(range.gridSize, range.page) // get the page's grid size that rows and cols
-            val scaledPageSize = pdfView.pdfFile.getScaledPageSize(range.page, pdfView.zoom)
+            val scaledPageSize = pdfFile.getScaledPageSize(range.page, pdfView.zoom)
             val rowHeight = scaledPageSize.height / range.gridSize.rows
             val colWidth = scaledPageSize.width / range.gridSize.cols
 
@@ -165,26 +177,26 @@ internal class PagesLoader(private val pdfView: PDFView) {
             // |            |           |            |
             // |            |           |            |
             // ---------------------------------------
-            val secondaryOffset = pdfView.pdfFile.getSecondaryPageOffset(page, pdfView.zoom)
+            val secondaryOffset = pdfFile.getSecondaryPageOffset(page, pdfView.zoom)
 
             // calculate the row,col of the point in the leftTop and rightBottom
-            if (pdfView.isSwipeVertical) {
+            if (pdfView.swipeVertical) {
                 range.leftTop.row = floor(
-                    (abs((pageFirstYOffset - pdfView.pdfFile.getPageOffset(range.page, pdfView.zoom))) / rowHeight)
+                    (abs((pageFirstYOffset - pdfFile.getPageOffset(range.page, pdfView.zoom))) / rowHeight)
                 ).toInt()
                 range.leftTop.col =
                     floor((max((pageFirstXOffset - secondaryOffset), 0f) / colWidth)).toInt()
 
                 range.rightBottom.row =
-                    ceil((abs((pageLastYOffset - pdfView.pdfFile.getPageOffset(range.page, pdfView.zoom))) / rowHeight)).toInt()
+                    ceil((abs((pageLastYOffset - pdfFile.getPageOffset(range.page, pdfView.zoom))) / rowHeight)).toInt()
                 range.rightBottom.col = floor((max((pageLastXOffset - secondaryOffset), 0f) / colWidth)).toInt()
             } else {
                 range.leftTop.col =
-                    floor((abs((pageFirstXOffset - pdfView.pdfFile.getPageOffset(range.page, pdfView.zoom))) / colWidth)).toInt()
+                    floor((abs((pageFirstXOffset - pdfFile.getPageOffset(range.page, pdfView.zoom))) / colWidth)).toInt()
                 range.leftTop.row = floor((max((pageFirstYOffset - secondaryOffset), 0f) / rowHeight)).toInt()
 
                 range.rightBottom.col =
-                    floor((abs((pageLastXOffset - pdfView.pdfFile.getPageOffset(range.page, pdfView.zoom))) / colWidth)).toInt()
+                    floor((abs((pageLastXOffset - pdfFile.getPageOffset(range.page, pdfView.zoom))) / colWidth)).toInt()
                 range.rightBottom.row = floor((max((pageLastYOffset - secondaryOffset), 0f) / rowHeight)).toInt()
             }
 
@@ -265,13 +277,13 @@ internal class PagesLoader(private val pdfView: PDFView) {
 
         if (renderWidth > 0 && renderHeight > 0) {
             if (!pdfView.cacheManager.upPartIfContained(page, pageRelativeBounds, cacheOrder)) {
-                pdfView.renderingHandler.addRenderingTask(
+                pdfView.renderingHandler?.addRenderingTask(
                     page,
                     RenderingSize(renderWidth, renderHeight, pageRelativeBounds),
                     false,
                     cacheOrder,
-                    pdfView.isBestQuality,
-                    pdfView.isAnnotationRendering,
+                    pdfView.bestQuality,
+                    pdfView.annotationRenderingEnabled,
                     false
                 )
             }
@@ -283,18 +295,23 @@ internal class PagesLoader(private val pdfView: PDFView) {
     }
 
     private fun loadThumbnail(page: Int, isForPrinting: Boolean) {
-        val pageSize = pdfView.pdfFile.getPageSize(page)
+        val pdfFile = pdfView.pdfFile
+        if (pdfFile == null) {
+            Log.e("PagesLoader", "loadThumbnail: pdfFile is null")
+            return
+        }
+        val pageSize = pdfFile.getPageSize(page)
         val thumbnailRatio = if (isForPrinting) Constants.THUMBNAIL_RATIO_PRINTING else pdfView.thumbnailRatio
         val thumbnailWidth = pageSize.width * thumbnailRatio
         val thumbnailHeight = pageSize.height * thumbnailRatio
         if (!pdfView.cacheManager.containsThumbnail(page, thumbnailRect)) {
-            pdfView.renderingHandler.addRenderingTask(
+            pdfView.renderingHandler?.addRenderingTask(
                 page,
                 RenderingSize(thumbnailWidth, thumbnailHeight, thumbnailRect),
                 true,
                 0,
-                pdfView.isBestQuality,
-                pdfView.isAnnotationRendering,
+                pdfView.bestQuality,
+                pdfView.annotationRenderingEnabled,
                 isForPrinting
             )
         } else if (page == pdfView.getPageCount() - 1 && isForPrinting) {
