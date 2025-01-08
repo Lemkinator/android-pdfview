@@ -1,24 +1,20 @@
 plugins {
-    id("com.android.application")
+    id("com.android.library")
     id("org.jetbrains.kotlin.android")
 }
 
 android {
-    namespace = "de.lemke.pdfview.sample"
+    namespace = "de.lemke.pdfview"
+
     compileSdk = 35
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
     }
 
     buildTypes {
         release {
-            isDebuggable = false
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
             ndk {
@@ -26,9 +22,7 @@ android {
             }
         }
         debug {
-            isDebuggable = true
             isMinifyEnabled = false
-            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -41,23 +35,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-
-    buildFeatures {
-        viewBinding = true
-    }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
 }
 
 dependencies {
-    implementation(project(":lib"))
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.activity:activity-ktx:1.9.3")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("com.github.infomaniak:pdfiumandroid:1.9.6")
-    annotationProcessor("org.androidannotations:androidannotations:4.8.0")
 }
