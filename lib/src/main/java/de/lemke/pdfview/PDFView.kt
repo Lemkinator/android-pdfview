@@ -309,7 +309,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
     private fun load(docSource: DocumentSource, password: String?, userPages: IntArray? = null) {
         check(recycled) { "Don't call load on a PDF View without recycling it first." }
         recycled = false
-        decodingAsyncTask = DecodingAsyncTask(this, docSource, password, userPages, pdfiumCore).apply {
+        decodingAsyncTask = DecodingAsyncTask(this, pdfiumCore, docSource, password, userPages).apply {
             executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
         }
     }
@@ -387,31 +387,18 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
 
     fun recycle() {
         waitingDocumentConfigurator = null
-
         animationManager.stopAll()
         dragPinchManager.enabled = false
-
         // Stop tasks
-        if (renderingHandler != null) {
-            renderingHandler!!.stop()
-            renderingHandler!!.removeMessages(RenderingHandler.MSG_RENDER_TASK)
-        }
-        if (decodingAsyncTask != null) {
-            decodingAsyncTask!!.cancel(true)
-        }
-
+        renderingHandler?.removeMessages(RenderingHandler.MSG_RENDER_TASK)
+        decodingAsyncTask?.cancel(true)
         // Clear caches
         cacheManager.recycle()
-
-        if (scrollHandle != null && isScrollHandleInit) {
-            scrollHandle!!.destroyLayout()
+        if (isScrollHandleInit) {
+            scrollHandle?.destroyLayout()
         }
-
-        if (pdfFile != null) {
-            pdfFile!!.dispose()
-            pdfFile = null
-        }
-
+        pdfFile?.dispose()
+        pdfFile = null
         renderingHandler = null
         scrollHandle = null
         isScrollHandleInit = false
@@ -672,7 +659,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         renderingHandler = RenderingHandler(renderingHandlerThread!!.getLooper(), this)
         renderingHandler!!.start()
         if (scrollHandle != null) {
-            scrollHandle!!.setupLayout(this)
+            scrollHandle?.setupLayout(this)
             isScrollHandleInit = true
         }
         dragPinchManager.enabled = true
@@ -803,8 +790,8 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         currentYOffset = offsetY
         val positionOffset = getPositionOffset()
 
-        if (moveHandle && scrollHandle != null && !documentFitsView()) {
-            scrollHandle!!.setScroll(positionOffset)
+        if (moveHandle && !documentFitsView()) {
+            scrollHandle?.setScroll(positionOffset)
         }
 
         onPageScrollListener?.onPageScrolled(currentPage, positionOffset)
@@ -1109,6 +1096,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         fun linkHandler(linkHandler: LinkHandler?) = apply { this.linkHandler = linkHandler }
 
         fun pages(vararg pageNumbers: Int) = apply { this.pageNumbers = pageNumbers }
+        fun pages(range: IntRange) = apply { this.pageNumbers = range.toList().toIntArray() }
         fun defaultPage(defaultPage: Int) = apply { this.defaultPage = defaultPage }
         fun enableSwipe(enableSwipe: Boolean) = apply { this.enableSwipe = enableSwipe }
         fun enableDoubletap(enableDoubletap: Boolean) = apply { this.enableDoubletap = enableDoubletap }
@@ -1177,12 +1165,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
             this@PDFView.thumbnailRatio = thumbnailRatio
             this@PDFView.horizontalBorder = horizontalBorder
             this@PDFView.verticalBorder = verticalBorder
-
-            if (pageNumbers != null) {
-                this@PDFView.load(documentSource, password, pageNumbers)
-            } else {
-                this@PDFView.load(documentSource, password)
-            }
+            this@PDFView.load(documentSource, password, pageNumbers)
         }
     }
 

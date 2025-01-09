@@ -9,10 +9,10 @@ import java.lang.ref.WeakReference
 
 internal class DecodingAsyncTask(
     pdfView: PDFView?,
+    private val pdfiumCore: PdfiumCore,
     private val docSource: DocumentSource,
     private val password: String?,
     private val userPages: IntArray?,
-    private val pdfiumCore: PdfiumCore
 ) : AsyncTask<Void?, Void?, Throwable?>() {
     private var cancelled: Boolean = false
 

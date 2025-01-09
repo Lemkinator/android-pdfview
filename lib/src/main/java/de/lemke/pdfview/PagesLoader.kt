@@ -21,7 +21,7 @@ internal class PagesLoader(private val pdfView: PDFView) {
          * Tinier : a little bit slower to have the whole page rendered but more reactive.
          * Bigger : user will have to wait longer to have the first visual results.
          */
-        const val PART_SIZE = 256.0f
+        const val PART_SIZE = 256f
         /**
          * Part of document above and below screen that should be preloaded, in dp.
          */
