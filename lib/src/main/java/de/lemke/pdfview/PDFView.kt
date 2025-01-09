@@ -33,6 +33,7 @@ import de.lemke.pdfview.listener.OnLongPressListener
 import de.lemke.pdfview.listener.OnPageChangeListener
 import de.lemke.pdfview.listener.OnPageErrorListener
 import de.lemke.pdfview.listener.OnPageScrollListener
+import de.lemke.pdfview.listener.OnPasswordExceptionListener
 import de.lemke.pdfview.listener.OnRenderListener
 import de.lemke.pdfview.listener.OnTapListener
 import de.lemke.pdfview.model.PagePart
@@ -47,6 +48,7 @@ import de.lemke.pdfview.util.FitPolicy
 import de.lemke.pdfview.util.SnapEdge
 import de.lemke.pdfview.util.Util.getDP
 import io.legere.pdfiumandroid.PdfDocument
+import io.legere.pdfiumandroid.PdfPasswordException
 import io.legere.pdfiumandroid.PdfiumCore
 import io.legere.pdfiumandroid.util.Size
 import java.io.File
@@ -75,6 +77,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
     var onDetachCompleteListener: OnDetachCompleteListener? = null
     var onBitmapsReadyListener: OnBitmapsReadyListener? = null
     var onErrorListener: OnErrorListener? = null
+    var onPasswordExceptionListener: OnPasswordExceptionListener? = null
     var onPageErrorListener: OnPageErrorListener? = null
     var onRenderListener: OnRenderListener? = null
     var onPageChangeListener: OnPageChangeListener? = null
@@ -671,7 +674,8 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         // store reference, because callbacks will be cleared in recycle() method
         recycle()
         invalidate()
-        onErrorListener?.onError(t)
+        if (t is PdfPasswordException) onPasswordExceptionListener?.onPasswordException()
+        else onErrorListener?.onError(t)
         Log.e(TAG, "load pdf error", t)
     }
 
@@ -1044,6 +1048,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         var onAttachCompleteListener: OnAttachCompleteListener? = null
         var onDetachCompleteListener: OnDetachCompleteListener? = null
         var onErrorListener: OnErrorListener? = null
+        var onPasswordExceptionListener: OnPasswordExceptionListener? = null
         var onPageChangeListener: OnPageChangeListener? = null
         var onPageScrollListener: OnPageScrollListener? = null
         var onRenderListener: OnRenderListener? = null
@@ -1087,6 +1092,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         fun onDetach(listener: OnDetachCompleteListener?) = apply { this.onDetachCompleteListener = listener }
         fun onPageScroll(listener: OnPageScrollListener?) = apply { this.onPageScrollListener = listener }
         fun onError(listener: OnErrorListener?) = apply { this.onErrorListener = listener }
+        fun onPasswordException(listener: OnPasswordExceptionListener?) = apply { this.onPasswordExceptionListener = listener }
         fun onPageError(listener: OnPageErrorListener?) = apply { this.onPageErrorListener = listener }
         fun onPageChange(listener: OnPageChangeListener?) = apply { this.onPageChangeListener = listener }
         fun onRender(listener: OnRenderListener?) = apply { this.onRenderListener = listener }
@@ -1131,6 +1137,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
             this@PDFView.onDetachCompleteListener = onDetachCompleteListener
             this@PDFView.onBitmapsReadyListener = onBitmapsReadyListener
             this@PDFView.onErrorListener = onErrorListener
+            this@PDFView.onPasswordExceptionListener = onPasswordExceptionListener
             this@PDFView.onDrawListener = onDrawListener
             this@PDFView.onDrawAllListener = onDrawAllListener
             this@PDFView.onPageChangeListener = onPageChangeListener
