@@ -1,22 +1,22 @@
 package de.lemke.pdfview
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.RectF
+import android.util.SizeF
 import android.util.SparseBooleanArray
 import de.lemke.pdfview.exception.PageRenderingException
 import de.lemke.pdfview.util.PageSizeCalculator
-import com.shockwave.pdfium.PdfDocument
-import com.shockwave.pdfium.PdfiumCore
-import com.shockwave.pdfium.util.Size
-import com.shockwave.pdfium.util.SizeF
+import io.legere.pdfiumandroid.PdfDocument
+import io.legere.pdfiumandroid.util.Size
 import java.lang.Exception
 import java.util.ArrayList
 import kotlin.math.max
 
 class PdfFile(
-    private val pdfiumCore: PdfiumCore,
-    private var pdfDocument: PdfDocument?,
+    private val context: Context,
+    private var pdfDocument: PdfDocument,
     /**
      * The pages the user want to display in order
      * (ex: 0, 2, 2, 8, 8, 1, 1, 1)
@@ -70,10 +70,12 @@ class PdfFile(
         pagesCount = if (originalUserPages != null) {
             originalUserPages!!.size
         } else {
-            pdfiumCore.getPageCount(pdfDocument)
+            pdfDocument.getPageCount()
         }
         for (i in 0 until pagesCount) {
-            val pageSize = pdfiumCore.getPageSize(pdfDocument, documentPage(i))
+            val pageSize = pdfDocument.openPage(i).use { page ->
+                page.getPageSize(context.resources.displayMetrics.densityDpi)
+            }
             if (pageSize.width > originalMaxWidthPageSize.width) {
                 originalMaxWidthPageSize = pageSize
             }
@@ -255,7 +257,7 @@ class PdfFile(
         synchronized(lock) {
             if (openedPages.indexOfKey(docPage) < 0) {
                 try {
-                    pdfiumCore.openPage(pdfDocument, docPage)
+                    pdfDocument.openPage(docPage)
                     openedPages.put(docPage, true)
                     return true
                 } catch (e: Exception) {
@@ -270,39 +272,20 @@ class PdfFile(
     fun pageHasError(pageIndex: Int): Boolean = !openedPages.get(documentPage(pageIndex), false)
 
     fun renderPageBitmap(bitmap: Bitmap?, pageIndex: Int, bounds: Rect, annotationRendering: Boolean) {
-        pdfiumCore.renderPageBitmap(
-            pdfDocument, bitmap, documentPage(pageIndex),
-            bounds.left, bounds.top, bounds.width(), bounds.height(), annotationRendering
-        )
-    }
-
-    fun getMetaData(): PdfDocument.Meta? {
-        if (pdfDocument == null) {
-            return null
+        pdfDocument.openPage(documentPage(pageIndex)).use { page ->
+            page.renderPageBitmap(bitmap, bounds.left, bounds.top, bounds.width(), bounds.height(), annotationRendering)
         }
-        return pdfiumCore.getDocumentMeta(pdfDocument)
     }
 
-    fun getBookmarks(): MutableList<PdfDocument.Bookmark> {
-        if (pdfDocument == null) {
-            return ArrayList<PdfDocument.Bookmark>()
-        }
-        return pdfiumCore.getTableOfContents(pdfDocument)
-    }
+    fun getMetaData(): PdfDocument.Meta = pdfDocument.getDocumentMeta()
 
-    fun getPageLinks(pageIndex: Int): MutableList<PdfDocument.Link> =
-        pdfiumCore.getPageLinks(pdfDocument, documentPage(pageIndex))
+    fun getBookmarks(): List<PdfDocument.Bookmark> = pdfDocument.getTableOfContents()
 
-    fun mapRectToDevice(pageIndex: Int, startX: Int, startY: Int, sizeX: Int, sizeY: Int, rect: RectF): RectF =
-        pdfiumCore.mapRectToDevice(pdfDocument, documentPage(pageIndex), startX, startY, sizeX, sizeY, 0, rect)
+    fun getPageLinks(pageIndex: Int): List<PdfDocument.Link> =
+        pdfDocument.openPage(documentPage(pageIndex)).use { it.getPageLinks() }
 
-    fun dispose() {
-        if (pdfDocument != null) {
-            pdfiumCore.closeDocument(pdfDocument)
-        }
-        pdfDocument = null
-        originalUserPages = null
-    }
+    fun mapRectToDevice(pageIndex: Int, startX: Int, startY: Int, sizeX: Int, sizeY: Int, rect: RectF): Rect =
+        pdfDocument.openPage(documentPage(pageIndex)).use { it.mapRectToDevice(startX, startY, sizeX, sizeY, 0, rect) }
 
     /**
      * Given the UserPage number, this method restrict it

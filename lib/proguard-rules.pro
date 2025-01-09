@@ -16,4 +16,4 @@
 #   public *;
 #}
 
--keep class com.shockwave.**
+#-keep class io.legere.**

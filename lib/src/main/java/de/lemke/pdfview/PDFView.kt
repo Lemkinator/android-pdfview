@@ -16,12 +16,9 @@ import android.os.AsyncTask
 import android.os.HandlerThread
 import android.util.AttributeSet
 import android.util.Log
+import android.util.SizeF
 import android.widget.RelativeLayout
 import androidx.annotation.FloatRange
-import com.shockwave.pdfium.PdfDocument
-import com.shockwave.pdfium.PdfiumCore
-import com.shockwave.pdfium.util.Size
-import com.shockwave.pdfium.util.SizeF
 import de.lemke.pdfview.PDFView.ScrollDir
 import de.lemke.pdfview.exception.PageRenderingException
 import de.lemke.pdfview.link.DefaultLinkHandler
@@ -49,6 +46,9 @@ import de.lemke.pdfview.source.UriSource
 import de.lemke.pdfview.util.FitPolicy
 import de.lemke.pdfview.util.SnapEdge
 import de.lemke.pdfview.util.Util.getDP
+import io.legere.pdfiumandroid.PdfDocument
+import io.legere.pdfiumandroid.PdfiumCore
+import io.legere.pdfiumandroid.util.Size
 import java.io.File
 import java.io.InputStream
 import java.util.ArrayList
@@ -397,7 +397,6 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         if (isScrollHandleInit) {
             scrollHandle?.destroyLayout()
         }
-        pdfFile?.dispose()
         pdfFile = null
         renderingHandler = null
         scrollHandle = null
@@ -987,17 +986,17 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
     /**
      * Will be empty until document is loaded
      */
-    val tableOfContents: MutableList<PdfDocument.Bookmark>
+    val tableOfContents: List<PdfDocument.Bookmark>
         get() = if (pdfFile == null) {
-            mutableListOf<PdfDocument.Bookmark>()
+            listOf<PdfDocument.Bookmark>()
         } else pdfFile!!.getBookmarks()
 
     /**
      * Will be empty until document is loaded
      */
-    fun getLinks(page: Int): MutableList<PdfDocument.Link> {
+    fun getLinks(page: Int): List<PdfDocument.Link> {
         if (pdfFile == null) {
-            return mutableListOf<PdfDocument.Link>()
+            return listOf<PdfDocument.Link>()
         }
         return pdfFile!!.getPageLinks(page)
     }

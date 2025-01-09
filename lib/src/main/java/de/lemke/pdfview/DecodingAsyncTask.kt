@@ -2,8 +2,8 @@ package de.lemke.pdfview
 
 import android.os.AsyncTask
 import de.lemke.pdfview.source.DocumentSource
-import com.shockwave.pdfium.PdfiumCore
-import com.shockwave.pdfium.util.Size
+import io.legere.pdfiumandroid.PdfiumCore
+import io.legere.pdfiumandroid.util.Size
 import java.lang.NullPointerException
 import java.lang.ref.WeakReference
 
@@ -37,12 +37,7 @@ internal class DecodingAsyncTask(
                     getViewSize(pdfView),
                     pdfView.pageFitPolicy
                 )
-                pdfFile = PdfFile(
-                    pdfiumCore,
-                    pdfDocument,
-                    userPages,
-                    displayOptions
-                )
+                pdfFile = PdfFile(pdfView.context, pdfDocument, userPages, displayOptions)
                 return null
             } else {
                 return NullPointerException("pdfView == null")

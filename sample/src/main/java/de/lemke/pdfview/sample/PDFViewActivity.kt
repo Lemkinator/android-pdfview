@@ -16,8 +16,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.shockwave.pdfium.PdfDocument
-import com.shockwave.pdfium.PdfPasswordException
 import de.lemke.pdfview.PDFView.Configurator
 import de.lemke.pdfview.listener.OnErrorListener
 import de.lemke.pdfview.listener.OnLoadCompleteListener
@@ -26,6 +24,8 @@ import de.lemke.pdfview.listener.OnPageErrorListener
 import de.lemke.pdfview.sample.databinding.ActivityMainBinding
 import de.lemke.pdfview.scroll.DefaultScrollHandle
 import de.lemke.pdfview.scroll.ScrollHandle
+import io.legere.pdfiumandroid.PdfDocument
+import io.legere.pdfiumandroid.PdfPasswordException
 
 class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadCompleteListener, OnPageErrorListener, OnErrorListener {
 
@@ -127,7 +127,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
     private fun printBookmarksTree(bookmarks: List<PdfDocument.Bookmark>, sep: String) {
         for (bookmark in bookmarks) {
             Log.e(TAG, String.format("%s %s, p %d", sep, bookmark.title, bookmark.pageIdx))
-            if (bookmark.hasChildren()) printBookmarksTree(bookmark.children, "$sep-")
+            if (bookmark.children.isNotEmpty()) printBookmarksTree(bookmark.children, "$sep-")
         }
     }
 

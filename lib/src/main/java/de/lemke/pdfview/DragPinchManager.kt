@@ -87,7 +87,7 @@ internal class DragPinchManager(
                 link.bounds
             )
             mapped.sort()
-            if (mapped.contains(mappedX, mappedY)) {
+            if (mapped.contains(mappedX.toInt(), mappedY.toInt())) {
                 pdfView.linkHandler?.handleLinkEvent(LinkTapEvent(x, y, mappedX, mappedY, mapped, link))
                 return true
             }

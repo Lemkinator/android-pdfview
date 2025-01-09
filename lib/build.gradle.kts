@@ -40,5 +40,5 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    implementation("com.github.infomaniak:pdfiumandroid:1.9.6")
+    implementation("io.legere:pdfiumandroid:1.0.24")
 }

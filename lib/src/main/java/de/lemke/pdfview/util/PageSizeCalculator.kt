@@ -1,7 +1,7 @@
 package de.lemke.pdfview.util
 
-import com.shockwave.pdfium.util.Size
-import com.shockwave.pdfium.util.SizeF
+import android.util.SizeF
+import io.legere.pdfiumandroid.util.Size
 import kotlin.math.floor
 
 class PageSizeCalculator(

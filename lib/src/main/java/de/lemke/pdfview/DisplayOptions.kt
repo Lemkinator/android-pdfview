@@ -1,7 +1,7 @@
 package de.lemke.pdfview
 
 import de.lemke.pdfview.util.FitPolicy
-import com.shockwave.pdfium.util.Size
+import io.legere.pdfiumandroid.util.Size
 
 data class DisplayOptions(
     /** True if scrolling is vertical, else it's horizontal  */
