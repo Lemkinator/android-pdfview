@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PdfView Demo</string>
+    <string name="app_name">PdfView</string>
     <string name="toast_pick_file_error">Unable to pick file. Check status of file manager.</string>
     <string name="change_pdf">Change PDF</string>
     <string name="what_is_the_password">What is the password?</string>

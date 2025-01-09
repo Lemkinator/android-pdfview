@@ -16,18 +16,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.shockwave.pdfium.PdfDocument
-import com.shockwave.pdfium.PdfPasswordException
 import de.lemke.pdfview.PDFView.Configurator
-import de.lemke.pdfview.listener.OnErrorListener
-import de.lemke.pdfview.listener.OnLoadCompleteListener
 import de.lemke.pdfview.listener.OnPageChangeListener
 import de.lemke.pdfview.listener.OnPageErrorListener
+import de.lemke.pdfview.listener.OnPasswordExceptionListener
 import de.lemke.pdfview.sample.databinding.ActivityMainBinding
 import de.lemke.pdfview.scroll.DefaultScrollHandle
 import de.lemke.pdfview.scroll.ScrollHandle
 
-class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadCompleteListener, OnPageErrorListener, OnErrorListener {
+class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnPageErrorListener, OnPasswordExceptionListener {
 
     private var uri: Uri? = null
     private var pageNumber = 0
@@ -107,7 +104,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
         pdfConfigurator.defaultPage(pageNumber)
             .onPageChange(this)
             .enableAnnotationRendering(true)
-            .onLoad(this)
+            .onPasswordException(this)
             .scrollHandle(pdfScrollHandle)
             .pageSeparatorSpacing(PDF_PAGE_SPACING_DP)
             .startEndSpacing(START_END_SPACING_DP, START_END_SPACING_DP)
@@ -122,26 +119,6 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
         PasswordDialog(
             onPasswordEntered = { password -> uri?.let { displayFromUri(it, password) } },
         ).also { it.show(supportFragmentManager, "TAG") }
-    }
-
-    private fun printBookmarksTree(bookmarks: List<PdfDocument.Bookmark>, sep: String) {
-        for (bookmark in bookmarks) {
-            Log.e(TAG, String.format("%s %s, p %d", sep, bookmark.title, bookmark.pageIdx))
-            if (bookmark.hasChildren()) printBookmarksTree(bookmark.children, "$sep-")
-        }
-    }
-
-    override fun loadComplete(nbPages: Int) {
-        val meta = binding.pdfView.documentMeta
-        Log.e(TAG, "title = " + meta?.title)
-        Log.e(TAG, "author = " + meta?.author)
-        Log.e(TAG, "subject = " + meta?.subject)
-        Log.e(TAG, "keywords = " + meta?.keywords)
-        Log.e(TAG, "creator = " + meta?.creator)
-        Log.e(TAG, "producer = " + meta?.producer)
-        Log.e(TAG, "creationDate = " + meta?.creationDate)
-        Log.e(TAG, "modDate = " + meta?.modDate)
-        printBookmarksTree(binding.pdfView.tableOfContents, "-")
     }
 
     override fun onPageChanged(page: Int, pageCount: Int) {
@@ -171,10 +148,8 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnLoadComplet
         Log.e(TAG, "Cannot load page $page")
     }
 
-    override fun onError(throwable: Throwable?) {
-        when (throwable) {
-            is PdfPasswordException -> openPasswordDialog()
-        }
+    override fun onPasswordException() {
+        openPasswordDialog()
     }
 
     companion object {

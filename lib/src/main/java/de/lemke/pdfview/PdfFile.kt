@@ -4,12 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.SparseBooleanArray
-import de.lemke.pdfview.exception.PageRenderingException
-import de.lemke.pdfview.util.PageSizeCalculator
 import com.shockwave.pdfium.PdfDocument
 import com.shockwave.pdfium.PdfiumCore
 import com.shockwave.pdfium.util.Size
 import com.shockwave.pdfium.util.SizeF
+import de.lemke.pdfview.exception.PageRenderingException
+import de.lemke.pdfview.util.PageSizeCalculator
 import java.lang.Exception
 import java.util.ArrayList
 import kotlin.math.max
