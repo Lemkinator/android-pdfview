@@ -1,10 +1,9 @@
 package de.lemke.pdfview
 
 import android.os.AsyncTask
-import de.lemke.pdfview.source.DocumentSource
 import com.shockwave.pdfium.PdfiumCore
 import com.shockwave.pdfium.util.Size
-import java.lang.NullPointerException
+import de.lemke.pdfview.source.DocumentSource
 import java.lang.ref.WeakReference
 
 internal class DecodingAsyncTask(

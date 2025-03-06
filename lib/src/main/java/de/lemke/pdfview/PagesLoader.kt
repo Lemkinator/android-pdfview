@@ -3,8 +3,6 @@ package de.lemke.pdfview
 import android.graphics.RectF
 import android.util.Log
 import de.lemke.pdfview.CacheManager.Companion.CACHE_SIZE
-import de.lemke.pdfview.PagesLoader.GridSize
-import de.lemke.pdfview.PagesLoader.RenderRange
 import de.lemke.pdfview.RenderingHandler.RenderingSize
 import de.lemke.pdfview.util.Util.getDP
 import java.util.LinkedList

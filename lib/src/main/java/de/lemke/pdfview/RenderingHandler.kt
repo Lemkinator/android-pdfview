@@ -8,10 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.util.Log
-import de.lemke.pdfview.RenderingHandler.RenderingTask
 import de.lemke.pdfview.exception.PageRenderingException
 import de.lemke.pdfview.model.PagePart
 import kotlin.math.roundToInt
+import androidx.core.graphics.createBitmap
 
 /**
  * A [Handler] that will process incoming [RenderingTask] messages
@@ -89,16 +89,12 @@ class RenderingHandler(
         }
 
         var render: Bitmap? = null
-        runCatching {
-            Bitmap.createBitmap(
-                w, h, if (renderingTask.bestQuality) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565
-            )
-        }.onSuccess { renderedBitmap ->
-            render = renderedBitmap
-        }.onFailure {
-            Log.e(TAG, "Cannot create bitmap", it)
-            render = null
-        }
+        runCatching { createBitmap(w, h, if (renderingTask.bestQuality) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565) }
+            .onSuccess { renderedBitmap -> render = renderedBitmap }
+            .onFailure {
+                Log.e(TAG, "Cannot create bitmap", it)
+                render = null
+            }
 
         calculateBounds(w, h, renderingTask.renderingSize.bounds)
 

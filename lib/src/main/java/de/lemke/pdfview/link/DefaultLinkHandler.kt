@@ -1,8 +1,8 @@
 package de.lemke.pdfview.link
 
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import de.lemke.pdfview.PDFView
 import de.lemke.pdfview.model.LinkTapEvent
 
@@ -19,7 +19,11 @@ class DefaultLinkHandler(private val pdfView: PDFView) : LinkHandler {
     }
 
     private fun handleUri(uri: String?) {
-        val parsedUri = Uri.parse(uri)
+        val parsedUri = uri?.toUri()
+        if (parsedUri == null) {
+            Log.w(TAG, "Invalid URI: $uri")
+            return
+        }
         val intent = Intent(Intent.ACTION_VIEW, parsedUri)
         val context = pdfView.context
         if (intent.resolveActivity(context.packageManager) != null) {

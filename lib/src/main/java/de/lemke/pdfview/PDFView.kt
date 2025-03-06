@@ -23,7 +23,6 @@ import com.shockwave.pdfium.PdfPasswordException
 import com.shockwave.pdfium.PdfiumCore
 import com.shockwave.pdfium.util.Size
 import com.shockwave.pdfium.util.SizeF
-import de.lemke.pdfview.PDFView.ScrollDir
 import de.lemke.pdfview.exception.PageRenderingException
 import de.lemke.pdfview.link.DefaultLinkHandler
 import de.lemke.pdfview.link.LinkHandler
@@ -53,7 +52,6 @@ import de.lemke.pdfview.util.SnapEdge
 import de.lemke.pdfview.util.Util.getDP
 import java.io.File
 import java.io.InputStream
-import java.util.ArrayList
 
 /**
  * This class supports animations, zoom, caching, and swiping.
@@ -71,6 +69,7 @@ import java.util.ArrayList
  *   However, the user can change the page order using the `.load` method. For example,
  *   a UserPage of 5 can refer to a DocumentPage of 17.
  */
+@Suppress("unused")
 class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, set) {
     var onLoadCompleteListener: OnLoadCompleteListener? = null
     var onAttachCompleteListener: OnAttachCompleteListener? = null

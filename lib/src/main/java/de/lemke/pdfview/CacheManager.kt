@@ -1,10 +1,7 @@
 package de.lemke.pdfview
 
 import android.graphics.RectF
-import de.lemke.pdfview.CacheManager.PagePartComparator
 import de.lemke.pdfview.model.PagePart
-import java.util.ArrayList
-import java.util.Comparator
 import java.util.PriorityQueue
 
 class CacheManager {

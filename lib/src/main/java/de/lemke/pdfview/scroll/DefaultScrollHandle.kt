@@ -16,7 +16,9 @@ import de.lemke.pdfview.R
 import de.lemke.pdfview.util.TouchUtils.Companion.handleTouchPriority
 import de.lemke.pdfview.util.Util.getDP
 import kotlin.math.roundToInt
+import androidx.core.view.isVisible
 
+@Suppress("unused")
 open class DefaultScrollHandle @JvmOverloads constructor(context: Context, private val inverted: Boolean = false) :
     RelativeLayout(context),
     ScrollHandle {
@@ -79,7 +81,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
         val layoutInflater = LayoutInflater.from(context)
         val view = layoutInflater.inflate(R.layout.default_handle, null)
         pageIndicator = view.findViewById<TextView?>(R.id.pageIndicator)
-        pageIndicator!!.background = if (drawable != null) drawable else getDefaultHandleBackgroundDrawable()
+        pageIndicator!!.background = drawable ?: getDefaultHandleBackgroundDrawable()
         addView(view, getCustomViewLayoutParams())
         setRootLayoutParams()
     }
@@ -220,7 +222,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
     }
 
     override fun shown(): Boolean {
-        return visibility == VISIBLE
+        return isVisible
     }
 
     override fun show() {
