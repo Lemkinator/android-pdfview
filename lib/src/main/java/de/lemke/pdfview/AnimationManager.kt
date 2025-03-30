@@ -65,7 +65,7 @@ internal class AnimationManager(private val pdfView: PDFView) {
         minX: Int,
         maxX: Int,
         minY: Int,
-        maxY: Int
+        maxY: Int,
     ) {
         stopAll()
         flinging = true
@@ -73,18 +73,17 @@ internal class AnimationManager(private val pdfView: PDFView) {
     }
 
     fun startPageFlingAnimation(targetOffset: Float) {
-        if (pdfView.swipeVertical) {
-            startYAnimation(pdfView.currentYOffset, targetOffset)
-        } else {
-            startXAnimation(pdfView.currentXOffset, targetOffset)
-        }
+        if (pdfView.swipeVertical) startYAnimation(pdfView.currentYOffset, targetOffset)
+        else startXAnimation(pdfView.currentXOffset, targetOffset)
         pageFlinging = true
     }
 
     fun computeFling() {
         if (scroller.computeScrollOffset()) {
-            pdfView.moveTo(scroller.currX.toFloat(), scroller.currY.toFloat())
-            pdfView.loadPageByOffset()
+            if (shouldHandleScrollerValue()) {
+                pdfView.moveTo(scroller.currX.toFloat(), scroller.currY.toFloat())
+                pdfView.loadPageByOffset()
+            }
         } else if (flinging) { // fling finished
             flinging = false
             pdfView.loadPages()
@@ -93,11 +92,13 @@ internal class AnimationManager(private val pdfView: PDFView) {
         }
     }
 
+    private fun shouldHandleScrollerValue(): Boolean =
+        if (pdfView.swipeVertical) scroller.currY != 0 && scroller.currY != pdfView.getDocumentLength()
+        else scroller.currX != 0 && scroller.currX != pdfView.getDocumentLength()
+
     fun stopAll() {
-        if (animation != null) {
-            animation!!.cancel()
-            animation = null
-        }
+        animation?.cancel()
+        animation = null
         stopFling()
     }
 
@@ -106,9 +107,7 @@ internal class AnimationManager(private val pdfView: PDFView) {
         scroller.forceFinished(true)
     }
 
-    fun isFlinging(): Boolean {
-        return flinging || pageFlinging
-    }
+    fun isFlinging(): Boolean = flinging || pageFlinging
 
     private fun hideHandle() {
         pdfView.scrollHandle?.hideDelayed()
@@ -158,8 +157,7 @@ internal class AnimationManager(private val pdfView: PDFView) {
         Animator.AnimatorListener {
 
         override fun onAnimationUpdate(animation: ValueAnimator) {
-            val zoom = animation.getAnimatedValue() as Float
-            pdfView.zoomCenteredTo(zoom, PointF(centerX, centerY))
+            pdfView.zoomCenteredTo(animation.getAnimatedValue() as Float, PointF(centerX, centerY))
         }
 
         override fun onAnimationCancel(animation: Animator) {
@@ -173,10 +171,7 @@ internal class AnimationManager(private val pdfView: PDFView) {
             hideHandle()
         }
 
-        override fun onAnimationRepeat(animation: Animator) {
-        }
-
-        override fun onAnimationStart(animation: Animator) {
-        }
+        override fun onAnimationRepeat(animation: Animator) {}
+        override fun onAnimationStart(animation: Animator) {}
     }
 }

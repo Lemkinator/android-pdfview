@@ -163,7 +163,7 @@ class PDFViewActivity : AppCompatActivity(), OnPageChangeListener, OnPageErrorLi
         private const val HANDLE_PADDING_BOTTOM_DP = 40
         private const val PDF_PAGE_SPACING_DP = 10
         private const val DEFAULT_TEXT_SIZE_DP = 16
-        private const val START_END_SPACING_DP = 200
+        private const val START_END_SPACING_DP = 10
         private const val MIN_ZOOM = 0.93f
         private const val MID_ZOOM = 3.0f
         private const val MAX_ZOOM = 6.0f

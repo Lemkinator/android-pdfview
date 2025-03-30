@@ -257,6 +257,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
      * The thread [.renderingHandler] will run on
      */
     private var renderingHandlerThread: HandlerThread? = null
+
     /**
      * Handler always waiting in the background and rendering tasks
      */
@@ -325,7 +326,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
     fun jumpTo(page: Int, withAnimation: Boolean = false) {
         pdfFile?.let {
             val validPage = it.determineValidPageNumberFrom(page)
-            val offset = -it.getPageOffset(validPage, zoom) + pageSeparatorSpacing
+            val offset = -it.getPageOffset(validPage, zoom) + pageSeparatorSpacing + startSpacing
             if (swipeVertical) {
                 if (withAnimation) {
                     animationManager.startYAnimation(currentYOffset, offset)
@@ -468,6 +469,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         swipeVertical -> {
             (direction < 0 && currentXOffset < 0) || (direction > 0 && currentXOffset + toCurrentScale(pdfFile!!.maxPageWidth) > width)
         }
+
         else -> {
             (direction < 0 && currentXOffset < 0) || (direction > 0 && currentXOffset + pdfFile!!.getDocLen(zoom) > width)
         }
@@ -478,6 +480,7 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
         swipeVertical -> {
             (direction < 0 && currentYOffset < 0) || (direction > 0 && currentYOffset + pdfFile!!.getDocLen(zoom) > height)
         }
+
         else -> {
             (direction < 0 && currentYOffset < 0) || (direction > 0 && currentYOffset + toCurrentScale(pdfFile!!.maxPageHeight) > height)
         }
@@ -733,23 +736,19 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
             if (contentHeight < height) { // whole document height visible on screen
                 offsetY = (height - contentHeight) / 2
             } else {
-                val maxOffsetY = toCurrentScale((verticalBorder * 2f) - startSpacing)
+                val maxOffsetY = toCurrentScale(verticalBorder * 2f)
+                val minOffsetY = getMinOffsetY()
                 if (offsetY > maxOffsetY) { // top visible
                     offsetY = maxOffsetY
-                } else if (offsetY + contentHeight + toCurrentScale((verticalBorder * 2f)) < height + toCurrentScale(
-                        endSpacing.toFloat()
-                    )
-                ) { // bottom visible
-                    offsetY = -contentHeight + height + toCurrentScale(endSpacing - (verticalBorder * 2f))
+                } else if (offsetY < minOffsetY) { // bottom visible
+                    offsetY = minOffsetY
                 }
             }
 
-            scrollDir = if (offsetY < currentYOffset) {
-                ScrollDir.END
-            } else if (offsetY > currentYOffset) {
-                ScrollDir.START
-            } else {
-                ScrollDir.NONE
+            scrollDir = when {
+                offsetY < currentYOffset -> ScrollDir.END
+                offsetY > currentYOffset -> ScrollDir.START
+                else -> ScrollDir.NONE
             }
         } else {
             // Check Y offset
@@ -769,36 +768,26 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
             if (contentWidth < width) { // whole document width visible on screen
                 offsetX = (width - contentWidth) / 2f
             } else {
-                val maxOffsetX = toCurrentScale((horizontalBorder * 2f) - startSpacing)
+                val maxOffsetX = toCurrentScale(horizontalBorder * 2f)
+                val minOffsetX = getMinOffsetX()
                 if (offsetX > maxOffsetX) { // left visible
                     offsetX = maxOffsetX
-                } else if (offsetX + contentWidth + toCurrentScale((horizontalBorder * 2f)) < width + toCurrentScale(
-                        endSpacing.toFloat()
-                    )
-                ) { // right visible
-                    offsetX = -contentWidth + width + toCurrentScale(endSpacing - (horizontalBorder * 2f))
+                } else if (offsetX < minOffsetX) { // right visible
+                    offsetX = minOffsetX
                 }
             }
 
-            scrollDir = if (offsetX < currentXOffset) {
-                ScrollDir.END
-            } else if (offsetX > currentXOffset) {
-                ScrollDir.START
-            } else {
-                ScrollDir.NONE
+            scrollDir = when {
+                offsetX < currentXOffset -> ScrollDir.END
+                offsetX > currentXOffset -> ScrollDir.START
+                else -> ScrollDir.NONE
             }
         }
-
         currentXOffset = offsetX
         currentYOffset = offsetY
         val positionOffset = getPositionOffset()
-
-        if (moveHandle && !documentFitsView()) {
-            scrollHandle?.setScroll(positionOffset)
-        }
-
+        if (moveHandle && !documentFitsView()) scrollHandle?.setScroll(positionOffset)
         onPageScrollListener?.onPageScrolled(currentPage, positionOffset)
-
         invalidate()
     }
 
@@ -815,6 +804,12 @@ class PDFView(context: Context, set: AttributeSet?) : RelativeLayout(context, se
             }
         }
     }
+
+    private fun getMinOffsetX(): Float = width - toCurrentScale(endSpacing + horizontalBorder * 2f) - pdfFile!!.getDocLen(zoom)
+
+    private fun getMinOffsetY(): Float = height - toCurrentScale(endSpacing + verticalBorder * 2f) - pdfFile!!.getDocLen(zoom)
+
+    fun getDocumentLength(): Int = (if (swipeVertical) height else width) - pdfFile!!.getDocLen(zoom).toInt()
 
     /**
      * Animate to the nearest snapping position for the current SnapPolicy

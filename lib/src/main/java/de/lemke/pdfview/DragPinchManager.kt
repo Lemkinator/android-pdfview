@@ -9,8 +9,9 @@ import android.view.ScaleGestureDetector.OnScaleGestureListener
 import android.view.View
 import android.view.View.OnTouchListener
 import de.lemke.pdfview.model.LinkTapEvent
-import de.lemke.pdfview.util.TouchUtils
-import de.lemke.pdfview.util.TouchUtils.Companion.handleTouchPriority
+import de.lemke.pdfview.util.TouchUtils.DIRECTION_LEFT
+import de.lemke.pdfview.util.TouchUtils.DIRECTION_RIGHT
+import de.lemke.pdfview.util.TouchUtils.handleTouchPriority
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -21,7 +22,7 @@ import kotlin.math.min
  */
 internal class DragPinchManager(
     private val pdfView: PDFView,
-    private val animationManager: AnimationManager
+    private val animationManager: AnimationManager,
 ) : GestureDetector.OnGestureListener,
     GestureDetector.OnDoubleTapListener,
     OnScaleGestureListener,
@@ -97,7 +98,7 @@ internal class DragPinchManager(
 
     private fun startPageFling(
         downEvent: MotionEvent, ev: MotionEvent, velocityX: Float,
-        velocityY: Float
+        velocityY: Float,
     ) {
         if (!checkDoPageFling(velocityX, velocityY)) {
             return
@@ -269,10 +270,7 @@ internal class DragPinchManager(
     }
 
     override fun onTouch(v: View, event: MotionEvent): Boolean {
-        if (!enabled) {
-            return false
-        }
-
+        if (!enabled) return false
         var retVal = scaleGestureDetector.onTouchEvent(event)
         retVal = gestureDetector.onTouchEvent(event) || retVal
 
@@ -304,29 +302,15 @@ internal class DragPinchManager(
     }
 
     private fun shouldOverrideTouchPriority(v: View, event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) {
-            startingScrollingXPosition = event.x
-            startingTouchXPosition =
-                if (!v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_LEFT) || !v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT)) {
-                    event.x
-                } else {
-                    STARTING_TOUCH_POSITION_NOT_INITIALIZED
-                }
-            startingTouchYPosition = event.y
-        }
-
-        val scrollDirection = getScrollingDirection(event.x)
-
-        val canScrollLeft = v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_LEFT)
-        val canScrollRight = v.canScrollHorizontally(TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT)
+        val canScrollLeft = v.canScrollHorizontally(DIRECTION_LEFT)
+        val canScrollRight = v.canScrollHorizontally(DIRECTION_RIGHT)
         val canScrollHorizontally = canScrollLeft && canScrollRight
+        val scrollDirection = getScrollingDirection(event.x)
         val isScrollingBlocked =
-            (!canScrollRight && scrollDirection == TouchUtils.Companion.DIRECTION_SCROLLING_LEFT)
-                    || (!canScrollLeft && scrollDirection == TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT)
+            (!canScrollRight && scrollDirection == DIRECTION_LEFT) || (!canScrollLeft && scrollDirection == DIRECTION_RIGHT)
 
-        if (event.action == MotionEvent.ACTION_MOVE && canScrollHorizontally) {
-            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
-        }
+        if (event.action == MotionEvent.ACTION_DOWN) handleActionDownEvent(v, event)
+        else if (event.action == MotionEvent.ACTION_MOVE) handleActionMoveEvent(event, canScrollHorizontally)
 
         if (!isScrollingBlocked || startingTouchXPosition == STARTING_TOUCH_POSITION_NOT_INITIALIZED) {
             return false
@@ -337,17 +321,28 @@ internal class DragPinchManager(
         }
     }
 
-    private fun getScrollingDirection(x: Float): Int = if (x > startingScrollingXPosition) {
-        TouchUtils.Companion.DIRECTION_SCROLLING_RIGHT
-    } else {
-        TouchUtils.Companion.DIRECTION_SCROLLING_LEFT
+    private fun handleActionMoveEvent(event: MotionEvent, canScrollHorizontally: Boolean) {
+        if (canScrollHorizontally) {
+            startingTouchXPosition = STARTING_TOUCH_POSITION_NOT_INITIALIZED
+        } else if (startingTouchXPosition == STARTING_TOUCH_POSITION_NOT_INITIALIZED) {
+            startingTouchXPosition = event.x
+        }
     }
 
+    private fun handleActionDownEvent(v: View, event: MotionEvent) {
+        startingScrollingXPosition = event.x
+        startingTouchYPosition = event.y
+        startingTouchXPosition =
+            if (!v.canScrollHorizontally(DIRECTION_LEFT) || !v.canScrollHorizontally(DIRECTION_RIGHT)) event.x
+            else STARTING_TOUCH_POSITION_NOT_INITIALIZED
+    }
+
+    private fun getScrollingDirection(x: Float): Int =
+        if (x > startingScrollingXPosition) DIRECTION_RIGHT
+        else DIRECTION_LEFT
+
     private fun hideHandle() {
-        val scrollHandle = pdfView.scrollHandle
-        if (scrollHandle != null && scrollHandle.shown()) {
-            scrollHandle.hideDelayed()
-        }
+        pdfView.scrollHandle?.apply { if (shown()) hideDelayed() }
     }
 
     private fun checkDoPageFling(velocityX: Float, velocityY: Float): Boolean {

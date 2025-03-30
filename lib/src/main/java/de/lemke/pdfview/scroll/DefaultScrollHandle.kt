@@ -11,12 +11,12 @@ import android.view.View
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import de.lemke.pdfview.PDFView
 import de.lemke.pdfview.R
-import de.lemke.pdfview.util.TouchUtils.Companion.handleTouchPriority
+import de.lemke.pdfview.util.TouchUtils.handleTouchPriority
 import de.lemke.pdfview.util.Util.getDP
 import kotlin.math.roundToInt
-import androidx.core.view.isVisible
 
 @Suppress("unused")
 open class DefaultScrollHandle @JvmOverloads constructor(context: Context, private val inverted: Boolean = false) :
@@ -341,6 +341,7 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
                 }
                 return true
             }
+
             MotionEvent.ACTION_MOVE -> {
                 if (pdfView!!.swipeVertical) {
                     setPosition(event.rawY - currentPos + relativeHandlerMiddle)
@@ -351,12 +352,14 @@ open class DefaultScrollHandle @JvmOverloads constructor(context: Context, priva
                 }
                 return true
             }
+
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 hideDelayed()
                 pdfView!!.performPageSnap()
                 hasStartedDragging = false
                 return true
             }
+
             else -> {
                 return super.onTouchEvent(event)
             }
