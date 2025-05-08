@@ -41,5 +41,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
-    implementation("com.github.lion1988dev:PdfiumAndroid:1.9.4")
+    // use this one until implementation("com.github.lion1988dev:PdfiumAndroid:1.9.4") supports devices with 16KB page size
+    implementation("com.github.v-mas:PdfiumAndroid:1.9.5")
 }
